@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eclipse-userlibraries>
+  <library name="Maven: javax.servlet:jstl:1.2">
+    <archive path="C:/Users/Admin/.m2/repository/javax/servlet/jstl/1.2/jstl-1.2.jar" />
+  </library>
+  <library name="Maven: opensymphony:sitemesh:2.4.2">
+    <archive path="C:/Users/Admin/.m2/repository/opensymphony/sitemesh/2.4.2/sitemesh-2.4.2.jar" />
+  </library>
+  <library name="Maven: com.mchange:c3p0:0.9.5.5">
+    <archive path="C:/Users/Admin/.m2/repository/com/mchange/c3p0/0.9.5.5/c3p0-0.9.5.5.jar" />
+  </library>
+  <library name="Maven: mysql:mysql-connector-java:8.0.28">
+    <archive path="C:/Users/Admin/.m2/repository/mysql/mysql-connector-java/8.0.28/mysql-connector-java-8.0.28.jar" />
+  </library>
+  <library name="Maven: javax.servlet:javax.servlet-api:4.0.1">
+    <archive path="C:/Users/Admin/.m2/repository/javax/servlet/javax.servlet-api/4.0.1/javax.servlet-api-4.0.1.jar" />
+  </library>
+  <library name="Maven: javax.servlet.jsp:javax.servlet.jsp-api:2.3.3">
+    <archive path="C:/Users/Admin/.m2/repository/javax/servlet/jsp/javax.servlet.jsp-api/2.3.3/javax.servlet.jsp-api-2.3.3.jar" />
+  </library>
+  <library name="Maven: org.projectlombok:lombok:1.18.30">
+    <archive path="C:/Users/Admin/.m2/repository/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
+  </library>
+  <library name="Maven: com.fasterxml.jackson.core:jackson-core:2.18.4">
+    <archive path="C:/Users/Admin/.m2/repository/com/fasterxml/jackson/core/jackson-core/2.18.4/jackson-core-2.18.4.jar" />
+  </library>
+  <library name="Maven: com.fasterxml.jackson.core:jackson-databind:2.18.4">
+    <archive path="C:/Users/Admin/.m2/repository/com/fasterxml/jackson/core/jackson-databind/2.18.4/jackson-databind-2.18.4.jar" />
+  </library>
+  <library name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.18.4">
+    <archive path="C:/Users/Admin/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.18.4/jackson-annotations-2.18.4.jar" />
+  </library>
+  <library name="Maven: com.mchange:mchange-commons-java:0.2.19">
+    <archive path="C:/Users/Admin/.m2/repository/com/mchange/mchange-commons-java/0.2.19/mchange-commons-java-0.2.19.jar" />
+  </library>
+  <library name="Maven: com.google.protobuf:protobuf-java:3.11.4">
+    <archive path="C:/Users/Admin/.m2/repository/com/google/protobuf/protobuf-java/3.11.4/protobuf-java-3.11.4.jar" />
+  </library>
+</eclipse-userlibraries>
+
