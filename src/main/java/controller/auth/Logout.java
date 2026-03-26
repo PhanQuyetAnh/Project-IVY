@@ -17,7 +17,7 @@ import javax.servlet.http.HttpSession;
 /**
  * Servlet implementation class Login
  */
-@WebServlet("/public/logout")
+@WebServlet("/logout")
 public class Logout extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
@@ -29,10 +29,21 @@ public class Logout extends HttpServlet {
 
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         HttpSession session = request.getSession();
-        session.invalidate();
-        System.out.println("đã đăng xuất");
-        RequestDispatcher dispatcher = request.getRequestDispatcher("/public/trang-chu");
 
+        // In ra console trước khi hủy session
+        String fullname = (String) session.getAttribute("fullname");
+        System.out.println("========== LOGOUT ==========");
+        System.out.println("User: " + fullname + " đã đăng xuất");
+        System.out.println("============================");
+
+        // Hủy session
+        session.invalidate();
+
+        // Lấy context path để redirect
+        String contextPath = request.getContextPath();
+
+        // Redirect về trang chủ
+        response.sendRedirect(contextPath + "/public/trang-chu");
     }
 
     /**

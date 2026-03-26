@@ -159,27 +159,69 @@
               </div>
             </div>
             <!-- End Collapse Headphone -->
-            <div class="inner-user">
-              <a href="login"><i class="fa-regular fa-user"></i></a>
-            </div>
-            <div class="inner-cart">
-              <%
-                UserObject userObject = (UserObject) session.getAttribute("user");
-              %>
-              <% if (userObject == null) { %>
-              <a href="/jsp-servlet/public/login">
-                <i class="bi bi-bag"></i>
-                
-              </a>
-              <% } else { %>
-              <a href="/jsp-servlet/customer/cart">
-                <i class="bi bi-bag"></i>
-              </a>
-              <% } %>
-            </div>
+            <!-- Icon User - Cấu trúc giống "Bộ Sưu Tập" -->
+            <li>
+              <c:choose>
+                <c:when test="${empty sessionScope.user}">
+                  <!-- Chưa đăng nhập: href dẫn đến login -->
+                  <a href="login">
+                    <i class="fa-regular fa-user"></i>
+                  </a>
+                </c:when>
+                <c:otherwise>
+                  <!-- Đã đăng nhập: Icon User, dropdown sẽ hiện khi hover -->
+                  <a href="#">
+                    <i class="fa-regular fa-user"></i>
+                  </a>
+                  <!-- Dropdown menu: y hệt "Bộ Sưu Tập" -->
+                  <c:if test="${not empty sessionScope.user}">
+                    <ul id="userDropdownMenu">
+                      <div class="sub-title-menu">
+                        <a href="#">${sessionScope.user.fullname}</a>
+                      </div>
+                      <li><a href="profile">Thông tin tài khoản</a></li>
+                      <li><a href="orders">Quản lý đơn hàng</a></li>
+                      <li><a href="wishlist">Danh sách yêu thích</a></li>
+                      <li><a href="addresses">Địa chỉ giao hàng</a></li>
+                      <li><a href="javascript:void(0)" onclick="confirmLogout()">Đăng xuất</a></li>
+                    </ul>
+                  </c:if>
+                </c:otherwise>
+              </c:choose>
+            </li>
+            <!-- Cart với Mini Cart Sidebar -->
+            <a href="javascript:void(0)" class="cart-icon inner-cart">
+              <i class="bi bi-bag"></i>
+              <span class="cart-badge cart-count" id="cartBadge">
+                ${not empty sessionScope.cart ? sessionScope.cart.size() : 0}
+              </span>
+            </a>
+            <%@ include file="/views/web/mini-cart.jsp" %>
           </div>
         </div>
       </div>
     </div>
   </header>
   <!-- End Header -->
+
+<script>
+  // Mở Mini Cart khi click vào icon giỏ hàng
+  $(document).ready(function() {
+    $('#cartIconBtn').on('click', function(e) {
+      e.preventDefault();
+      showMiniCart();
+    });
+  });
+
+  function confirmLogout() {
+    if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống IVY moda không?")) {
+      // Chuyển hướng đến servlet logout
+      window.location.href = '${pageContext.request.contextPath}/logout';
+    }
+  }
+</script>
+
+
+
+
+

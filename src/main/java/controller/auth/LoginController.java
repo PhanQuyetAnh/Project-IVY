@@ -1,10 +1,15 @@
 package controller.auth;
 
 import dao.Impl.UserDAOImpl;
+import dao.Impl.CartDAOImpl;
 import dao.UserDAO;
+import dao.CartDAO;
 import model.UserObject;
+import model.CartObject;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.ArrayList;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -65,7 +70,7 @@ public class LoginController extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		String username = request.getParameter("username");
 		String password = request.getParameter("password");
-		String contextPath = request.getContextPath(); // Lấy đường dẫn tự động (ví dụ: /jsp_servlet_war_exploded)
+		String contextPath = request.getContextPath();
 
 		if(username != null && !username.isEmpty() && password != null && !password.isEmpty()){
 			UserDAO userDAO = new UserDAOImpl();
@@ -73,16 +78,37 @@ public class LoginController extends HttpServlet {
 
 			if (userObject == null){
 				// Chuyển hướng về trang login nếu sai tk/mk
-				response.sendRedirect(contextPath + "/public/login");
+				response.sendRedirect(contextPath + "/public/login?error=invalid");
 			} else {
+				// Lưu thông tin người dùng vào session
 				HttpSession session = request.getSession();
 				session.setAttribute("user", userObject);
+				session.setAttribute("userId", userObject.getUserId());
+				session.setAttribute("fullname", userObject.getFullname());
+				session.setAttribute("email", userObject.getEmail());
 
 				String roleName = userObject.getRole().getRoleName();
 				session.setAttribute("role", roleName);
 
+				// ========== GLOBAL SYNC: Nạp giỏ hàng vào Session ==========
+				// Khi user đăng nhập, tải danh sách giỏ hàng từ DB vào session một lần
+				CartDAO cartDAO = new CartDAOImpl();
+				List<CartObject> cartItems = cartDAO.getCartItems(userObject.getUserId());
+				// Nếu cartItems là null, khởi tạo ArrayList rỗng để tránh NullPointerException
+				if (cartItems == null) {
+					cartItems = new ArrayList<>();
+				}
+				session.setAttribute("cart", cartItems);
+				// ============================================================
+
 				// In ra console để kiểm tra giá trị thực tế từ DB
-				System.out.println("Login Success! Role is: " + roleName);
+				System.out.println("========== LOGIN SUCCESS ==========");
+				System.out.println("User ID: " + userObject.getUserId());
+				System.out.println("Full Name: " + userObject.getFullname());
+				System.out.println("Email: " + userObject.getEmail());
+				System.out.println("Role: " + roleName);
+				System.out.println("Cart Items: " + (cartItems != null ? cartItems.size() : 0));
+				System.out.println("===================================");
 
 				if ("ADMIN".equals(roleName)) {
 					response.sendRedirect(contextPath + "/admin/admin-home");
@@ -90,6 +116,9 @@ public class LoginController extends HttpServlet {
 					response.sendRedirect(contextPath + "/public/trang-chu");
 				}
 			}
+		} else {
+			// Nếu không có username hoặc password
+			response.sendRedirect(contextPath + "/public/login?error=empty");
 		}
 	}
 }

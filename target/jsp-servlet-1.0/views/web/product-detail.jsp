@@ -1,6 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
+<%@page import="model.UserObject"%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -9,7 +10,6 @@
 
 </head>
 <body>
-<!-- Product Detail -->
 <div class="product-detail">
     <div class="container">
         <div class="box-breadcumb">
@@ -28,7 +28,6 @@
                     <div class="product-detail__gallery">
                         <div class="product-gallery__slide">
                             <div class="product-gallery__slide-big">
-                                <!-- <img src="assets/images/detail1.webp" alt=""> -->
                                 <div id="carouselExampleIndicators" class="carousel slide">
                                     <div class="carousel-indicators">
                                         <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
@@ -41,13 +40,13 @@
                                             <img src="<c:url value='${product.productImage}'/>" class="d-block w-100" alt="...">
                                         </div>
                                         <div class="carousel-item">
-                                            <img src="<c:url value='${product.productImage}'/>" class="d-block w-100" alt="...">
+                                            <img src="<c:url value='${product.productImage2}'/>" class="d-block w-100" alt="...">
                                         </div>
                                         <div class="carousel-item">
-                                            <img src="<c:url value='${product.productImage}'/>" class="d-block w-100" alt="...">
+                                            <img src="<c:url value='${product.productImage3}'/>" class="d-block w-100" alt="...">
                                         </div>
                                         <div class="carousel-item">
-                                            <img src="<c:url value='${product.productImage}'/>" class="d-block w-100" alt="...">
+                                            <img src="<c:url value='${product.productImage4}'/>" class="d-block w-100" alt="...">
                                         </div>
                                     </div>
                                     <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
@@ -67,13 +66,13 @@
                                         <img src="<c:url value='${product.productImage}'/>" alt="">
                                     </div>
                                     <div class="swiper-slide">
-                                        <img src="<c:url value='${product.productImage}'/>" alt="">
+                                        <img src="<c:url value='${product.productImage2}'/>" alt="">
                                     </div>
                                     <div class="swiper-slide">
-                                        <img src="<c:url value='${product.productImage}'/>" alt="">
+                                        <img src="<c:url value='${product.productImage3}'/>" alt="">
                                     </div>
                                     <div class="swiper-slide">
-                                        <img src="<c:url value='${product.productImage}'/>" alt="">
+                                        <img src="<c:url value='${product.productImage4}'/>" alt="">
                                     </div>
                                 </div>
                             </div>
@@ -122,7 +121,7 @@
                             <h3>Số lượng</h3>
                             <div class="product-detail__num">
                                 <div class="product-detail__num-decre"><i class="fa-solid fa-minus"></i></div>
-                                <span>${product.productQuantity}</span>
+                                <span>1</span>
                                 <div class="product-detail__num-incre"><i class="fa-solid fa-plus"></i></div>
                             </div>
                         </div>
@@ -208,58 +207,158 @@
                 <p>Sản phẩm không tồn tại hoặc đã bị xóa.</p>
             </div>
         </c:if>
-        <!-- Các phần "MUA CÙNG VỚI" và "Sản phẩm đã xem" có thể giữ nguyên hoặc cập nhật tương tự -->
     </div>
 </div>
 
-
+<%
+    UserObject userObj = (UserObject) session.getAttribute("user");
+    boolean isLoggedIn = (userObj != null);
+%>
 
 <script>
     $(document).ready(function() {
-        // Áp dụng cho các ảnh trong carousel
-        $('.carousel-item').mousemove(function(e) {
-            const fare = $(this).offset(); // Lấy vị trí của khung ảnh so với trình duyệt
+        // Biến isLoggedIn từ JSP
+        const isLoggedIn = <%= isLoggedIn %>;
 
-            // Tính toán vị trí chuột tương đối bên trong khung ảnh (%)
-            const x = ((e.pageX - fare.left) / $(this).width()) * 100;
-            const y = ((e.pageY - fare.top) / $(this).height()) * 100;
-
-            // Cập nhật tâm điểm zoom (transform-origin) theo tọa độ chuột
-            $(this).find('img').css('transform-origin', x + '% ' + y + '%');
-        });
-
-        // Khi chuột rời khỏi ảnh, trả tâm điểm về chính giữa (tùy chọn)
-        $('.carousel-item').mouseleave(function() {
-            $(this).find('img').css('transform-origin', 'center center');
-        });
-    });
-
-    $(() => {
-        // 1. Logic chuyển tab của bạn (đã thêm dấu > để bảo vệ rèm che)
+        // 1. Logic chuyển tab
         $(".tab-navs a").click(function (e) {
             e.preventDefault();
             $(".tab-navs a").removeClass("active");
             $(this).addClass("active");
 
             let currentTab = $(this).attr("href");
-
-            // Sửa ở đây: thêm dấu ">" để chỉ ẩn tab cha (#tab1, #tab2...)
             $(".tab-contents > div").hide();
             $(currentTab).show();
         });
 
-        // 2. Logic cho rèm che (Nút mũi tên)
+        // 2. Logic rèm che (Nút mũi tên)
         $(".show-more-btn").click(function() {
-            // Tìm cái khung nội dung ngay phía trước nút này
             $(this).prev(".tab-content-inner").toggleClass("expanded");
-            // Xoay mũi tên
             $(this).toggleClass("active");
         });
+
+        // 3. Logic chọn size sản phẩm
+        $(".product-detail__size-input p").click(function() {
+            $(".product-detail__size-input p").removeClass("active-size");
+            $(this).addClass("active-size");
+        });
+
+        // 4. Helper: Kiểm tra size đã chọn
+        function isSelectedSize() {
+            return $(".product-detail__size-input p.active-size").length > 0;
+        }
+
+        // 5. Logic tăng/giảm số lượng với kiểm tra size
+        $(".product-detail__num-incre, .product-detail__num-decre").click(function() {
+            if (!isSelectedSize()) {
+                showToast("Vui lòng chọn size sản phẩm!");
+                return false;
+            }
+
+            const $quantitySpan = $(".product-detail__num span");
+            let currentQuantity = parseInt($quantitySpan.text());
+
+            if ($(this).hasClass("product-detail__num-incre")) {
+                currentQuantity++;
+            } else if ($(this).hasClass("product-detail__num-decre")) {
+                if (currentQuantity > 1) {
+                    currentQuantity--;
+                }
+            }
+
+            $quantitySpan.text(currentQuantity);
+        });
+
+        // 6. Logic nút "Thêm vào giỏ" - gửi AJAX
+        $(".add").click(function(e) {
+            e.preventDefault();
+
+            if (!isLoggedIn) {
+                showToast("Vui lòng đăng nhập để thực hiện chức năng này!");
+                return false;
+            }
+
+            if (!isSelectedSize()) {
+                showToast("Vui lòng chọn size sản phẩm!");
+                return false;
+            }
+
+            // Lấy thông tin sản phẩm
+            const productId = '${product.productId}';
+            const selectedSize = $(".product-detail__size-input p.active-size").text().trim();
+            const quantity = parseInt($(".product-detail__num span").text());
+
+            // Gửi AJAX request
+            $.ajax({
+                url: '${pageContext.request.contextPath}/customer/add-to-cart',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    product_id: productId,
+                    size: selectedSize,
+                    quantity: quantity
+                },
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Hiển thị toast message
+                        showToast('Thêm sản phẩm vào giỏ hàng thành công!');
+
+                        // SỬA Ở ĐÂY: Thay vì gọi hàm ảo, gọi đúng hàm refreshCartUI của cart.js
+                        if (typeof refreshCartUI === 'function') {
+                            refreshCartUI(false); // Cập nhật ngầm, không tự xổ Sidebar ra
+                        }
+                    } else {
+                        showToast(response.message);
+                    }
+                },
+                error: function() {
+                    showToast('Lỗi khi thêm sản phẩm vào giỏ!');
+                }
+            });
+        });
+
+        // 7. Logic nút "Mua hàng" - kiểm tra login + size
+        $(".buy").click(function() {
+            if (!isLoggedIn) {
+                showToast("Vui lòng đăng nhập để thực hiện chức năng này!");
+                return false;
+            }
+
+            if (!isSelectedSize()) {
+                showToast("Vui lòng chọn size sản phẩm!");
+                return false;
+            }
+
+            console.log("Mua hàng thành công!");
+        });
+
+        // 8. Logic nút "Yêu thích" - kiểm tra login
+        $(".heart").click(function() {
+            if (!isLoggedIn) {
+                showToast("Vui lòng đăng nhập để thực hiện chức năng này!");
+                return false;
+            }
+
+            $(this).toggleClass("active");
+            console.log("Cập nhật yêu thích thành công!");
+        });
+
+        // 9. Logic Carousel zoom
+        $('.carousel-item').mousemove(function(e) {
+            const fare = $(this).offset();
+            const x = ((e.pageX - fare.left) / $(this).width()) * 100;
+            const y = ((e.pageY - fare.top) / $(this).height()) * 100;
+            $(this).find('img').css('transform-origin', x + '% ' + y + '%');
+        });
+
+        $('.carousel-item').mouseleave(function() {
+            $(this).find('img').css('transform-origin', 'center center');
+        });
     });
-
-
 </script>
 
 </body>
 </html>
-

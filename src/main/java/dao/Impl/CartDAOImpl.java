@@ -17,8 +17,8 @@ import util.DBUtil;
 
 
 public class CartDAOImpl implements CartDAO {
-	
-	
+
+
 
 	@Override
     public List<CartObject> getCartItems(int userId) {
@@ -59,34 +59,31 @@ public class CartDAOImpl implements CartDAO {
     @Override
     public CartObject getCartItem(int userId, int productId, String productSize) {
         CartObject cartItem = null;
-        StringBuilder sql = new StringBuilder();
-        sql.append("SELECT user_id, product_id, quantity, product_size ");
-        sql.append("FROM cart WHERE user_id = ? AND product_id = ? AND product_size = ?");
+        // Dùng SELECT * cho gọn hoặc liệt kê đủ cột
+        String sql = "SELECT user_id, product_id, quantity, product_size FROM cart WHERE user_id = ? AND product_id = ? AND product_size = ?";
 
         try (Connection conn = DBUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, userId);
             stmt.setInt(2, productId);
             stmt.setString(3, productSize);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
 
-                UserObject userObject = new UserObject();
-                userObject.setUserId(rs.getInt("user_id"));
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) { // Dùng IF vì chỉ có 1 row duy nhất thỏa mãn
+                    cartItem = new CartObject();
+                    cartItem.setQuantity(rs.getInt("quantity"));
+                    cartItem.setProductSize(rs.getString("product_size"));
 
-                ProductObject p = new ProductObject();
-                p.setProductId(rs.getInt("product_id"));
+                    ProductObject p = new ProductObject();
+                    p.setProductId(rs.getInt("product_id"));
+                    cartItem.setProductObject(p);
 
-                cartItem = new CartObject();
-
-                cartItem.setQuantity(rs.getInt("quantity"));
-                cartItem.setProductSize(rs.getString("product_size"));
-
-                cartItem.setProductObject(p);
-                cartItem.setUserObject(userObject);
+                    UserObject u = new UserObject();
+                    u.setUserId(rs.getInt("user_id"));
+                    cartItem.setUserObject(u);
+                }
             }
-
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -95,18 +92,29 @@ public class CartDAOImpl implements CartDAO {
 
     @Override
     public void addToCart(int userId, int productId, int quantity, String productSize) {
-        String sql = "INSERT INTO cart (user_id, product_id, quantity, product_size) VALUES (?, ?, ?, ?)";
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        // Kiểm tra sản phẩm đã có trong giỏ chưa
+        CartObject existingItem = getCartItem(userId, productId, productSize);
 
-            stmt.setInt(1, userId);
-            stmt.setInt(2, productId);
-            stmt.setInt(3, quantity);
-            stmt.setString(4, productSize);
-            stmt.executeUpdate();
+        if (existingItem != null) {
+            // Nếu đã có: cộng dồn số lượng
+            int currentQuantity = existingItem.getQuantity();
+            int newQuantity = currentQuantity + quantity;
+            updateCart(userId, productId, newQuantity, productSize);
+        } else {
+            // Nếu chưa có: INSERT mới
+            String sql = "INSERT INTO cart (user_id, product_id, quantity, product_size) VALUES (?, ?, ?, ?)";
+            try (Connection conn = DBUtil.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-        } catch (SQLException e) {
-            e.printStackTrace();
+                stmt.setInt(1, userId);
+                stmt.setInt(2, productId);
+                stmt.setInt(3, quantity);
+                stmt.setString(4, productSize);
+                stmt.executeUpdate();
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -139,7 +147,7 @@ public class CartDAOImpl implements CartDAO {
             stmt.setInt(1, userId);
             stmt.setInt(2, productId);
             stmt.setString(3, size);
-            return stmt.executeUpdate() > 1;
+            return stmt.executeUpdate() > 0;
 
         } catch (SQLException e) {
             e.printStackTrace();
