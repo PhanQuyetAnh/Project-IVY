@@ -1,6 +1,6 @@
 /**
  * IVY moda - Cart Logic (SSR Version)
- * Fix: Chống xung đột Toast & Hiển thị thông báo xóa
+ * Fix: Chống xung đột Toast & Hiển thị thông báo xóa + Fix lỗi trang Giỏ hàng lớn
  */
 
 const contextPath = window.location.pathname.includes('/jsp_servlet_war_exploded') ? '/jsp_servlet_war_exploded' : '';
@@ -20,6 +20,13 @@ $(document).ready(function() {
     $(document).on('click', '.header .inner-cart a, .cart-icon, .bag-icon, #openMiniCart', function(e) {
         e.preventDefault();
         e.stopPropagation();
+
+        // Chặn mở Minicart nếu đang đứng ở trang Giỏ hàng lớn (Trang 1) hoặc trang Thanh toán
+        if (window.location.pathname.includes('/customer/cart') || window.location.pathname.includes('/customer/checkout')) {
+            window.location.href = contextPath + '/customer/cart'; // Nếu lỡ bấm icon giỏ hàng thì load lại trang cart
+            return;
+        }
+
         $('#miniCartSidebar, #miniCartOverlay').addClass('active');
     });
 
@@ -34,7 +41,7 @@ $(document).ready(function() {
         updateCartQuantity(pid, size, 'up');
     });
 
-    // 4. Quantity Down (CHỐT: Hiển thị thông báo xóa ngay tại đây)
+    // 4. Quantity Down
     $(document).on('click', '.btn-qty-down', function() {
         const pid = $(this).attr('data-product-id');
         const size = $(this).attr('data-product-size');
@@ -69,32 +76,36 @@ function updateCartQuantity(pid, size, action) {
 }
 
 function refreshCartUI(openSidebar = false) {
+    // =================================================================
+    // CHỐT CHẶN: Kiểm tra nếu đang ở trang Giỏ hàng lớn thì load lại luôn
+    // Không cho chạy lệnh bóc tách HTML và xổ Minicart bên dưới nữa
+    // =================================================================
+    if (window.location.pathname.includes('/customer/cart')) {
+        window.location.reload();
+        return;
+    }
+
     const refreshUrl = window.location.href + (window.location.href.includes('?') ? '&' : '?') + "t=" + new Date().getTime();
 
-    // Dùng Fetch API (thay cho $.get) để đảm bảo sạch sẽ hoàn toàn
     fetch(refreshUrl)
         .then(response => response.text())
         .then(htmlData => {
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlData, "text/html");
 
-            // Bóc tách nội dung bằng Vanilla JS (Không dùng jQuery ở đây)
             const newItemsElement = doc.getElementById('miniCartItems');
             const newTotalWrapperElement = doc.getElementById('miniCartTotalWrapper');
 
             if (newItemsElement) {
-                // Đổ dữ liệu vào Sidebar thực trên màn hình
                 document.getElementById('miniCartItems').innerHTML = newItemsElement.innerHTML;
             }
             if (newTotalWrapperElement) {
                 document.getElementById('miniCartTotalWrapper').innerHTML = newTotalWrapperElement.innerHTML;
             }
 
-            // Sau khi đắp HTML xong, gọi lại các hàm bổ trợ
             updateCartBadge();
 
             if (openSidebar) {
-                // Chỉ dùng jQuery cho việc thêm class (vì nó không dính đến eval)
                 $('#miniCartSidebar, #miniCartOverlay').addClass('active');
             }
         })
@@ -103,8 +114,10 @@ function refreshCartUI(openSidebar = false) {
 
 
 function deleteCartItem(pid, size) {
-    $.post(contextPath + '/customer/delete-cart-item', {
-        product_id: pid, size: size
+    // 1. Sửa lại đường link cho khớp với @WebServlet
+    $.post(contextPath + '/customer/cart-delete-item', {
+        productId: pid, // 2. Sửa chữ product_id thành productId cho khớp request.getParameter
+        size: size
     }, function() {
         showToast('! Đã xóa sản phẩm khỏi giỏ hàng');
         refreshCartUI(true);
@@ -117,23 +130,21 @@ function updateCartBadge() {
     $('#cartBadge').text(rowCount);
 }
 
-// ========== TOAST ENGINE (CHỐT CSS & ANIMATION) ==========
+// ========== TOAST ENGINE ==========
 
-let toastTimeout; // Biến này để quản lý thời gian, tránh bị chồng chéo khi click nhanh
+let toastTimeout;
 
 function showToast(message, duration = 3000) {
-    // 1. Nếu đang có thông báo cũ, xóa ngay lập tức để hiện cái mới
     $('#ivyAppToast').remove();
     clearTimeout(toastTimeout);
 
-    // 2. Tự động Inject CSS nếu chưa có (Đã fix vị trí top: 100px)
     if ($('#ivyToastCSS').length === 0) {
         $('head').append(`
             <style id="ivyToastCSS">
                 #ivyAppToast {
                     position: fixed !important;
                     top: 100px !important;
-                    right: -450px; /* Bắt đầu từ ngoài rìa phải */
+                    right: -450px; 
                     min-width: 300px !important;
                     padding: 16px 24px !important;
                     border-radius: 8px !important;
@@ -145,35 +156,31 @@ function showToast(message, duration = 3000) {
                     bottom: auto !important;
                 }
                 #ivyAppToast.active {
-                    right: 20px !important; /* Trượt vào trong màn hình */
+                    right: 20px !important; 
                 }
             </style>
         `);
     }
 
-    // 3. Tạo thẻ Toast mới
     const $toast = $('<div id="ivyAppToast"></div>');
     $('body').append($toast);
 
-    // 4. Phân loại màu sắc
-    let bgColor = '#28a745'; // Mặc định: Xanh
+    let bgColor = '#28a745';
     let msgLower = message.toLowerCase();
-    if (msgLower.includes('xóa') || message.includes('!')) bgColor = '#dc3545'; // Đỏ
-    else if (msgLower.includes('lỗi') || msgLower.includes('vui lòng')) bgColor = '#ffc107'; // Vàng
+    if (msgLower.includes('xóa') || message.includes('!')) bgColor = '#dc3545';
+    else if (msgLower.includes('lỗi') || msgLower.includes('vui lòng')) bgColor = '#ffc107';
 
     $toast.text(message).css({
         'background-color': bgColor,
         'color': (bgColor === '#ffc107' ? '#000' : '#fff')
     });
 
-    // 5. Hiển thị: Trượt vào
     setTimeout(() => { $toast.addClass('active'); }, 10);
 
-    // 6. Tự động biến mất: Trượt ra rồi XÓA HẲN (remove)
     toastTimeout = setTimeout(() => {
-        $toast.removeClass('active'); // Trượt ra ngoài rìa
+        $toast.removeClass('active');
         setTimeout(() => {
-            $toast.remove(); // Xóa thẻ khỏi DOM để không đọng lại ở mép
-        }, 500); // Đợi hiệu ứng trượt kết thúc rồi mới xóa
+            $toast.remove();
+        }, 500);
     }, duration);
 }

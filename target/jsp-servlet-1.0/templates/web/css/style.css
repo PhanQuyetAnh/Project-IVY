@@ -2422,6 +2422,14 @@ img {
   backface-visibility: hidden; /* Giảm rung và nhòe khi dùng transform */
 }
 
+/* TRẠNG THÁI QUAN TRỌNG: Khi đã Click chọn size */
+.product-detail__size-input p.active-size {
+  background-color: #333 !important; /* Đổi nền đen */
+  color: #fff !important;           /* Chữ trắng */
+  border-color: #333 !important;
+  font-weight: bold;
+}
+
 /* End Product Detail */
 
 /* === ICON USER DROPDOWN - Cấu trúc giống "Bộ Sưu Tập" ===*/
@@ -2957,11 +2965,388 @@ img {
   }
 }
 
+/* =========================================
+   TRANG GIỎ HÀNG LỚN (CART PAGE)
+   ========================================= */
 
-/* TRẠNG THÁI QUAN TRỌNG: Khi đã Click chọn size */
-.product-detail__size-input p.active-size {
-  background-color: #333 !important; /* Đổi nền đen */
-  color: #fff !important;           /* Chữ trắng */
-  border-color: #333 !important;
+/* =========================================
+   TRANG GIỎ HÀNG LỚN (CART PAGE)
+   ========================================= */
+
+.cart-page-wrapper {
+  padding: 40px 0;
+}
+
+.cart-page-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 30px;
+}
+
+.cart-page-title span {
+  color: #dc3545;
+}
+
+/* KHUNG DANH SÁCH BÊN TRÁI */
+.cart-page-wrapper .cart-large-items {
+  background: #fff;
+  padding: 20px 25px;
+  border-radius: 8px;
+  border: 1px solid #e7e8e9;
+}
+
+.cart-page-wrapper .mini-cart-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.cart-page-wrapper .mini-cart-empty {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  font-size: 16px;
+}
+
+/* ĐỊNH DẠNG TỪNG ITEM BÊN TRÁI */
+.cart-page-wrapper .cart-item:last-child {
+  border-bottom: none !important; /* Xóa gạch chân ở item cuối cùng */
+}
+
+.cart-page-wrapper .item-image-wrapper {
+  width: 80px;
+  height: 110px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cart-page-wrapper .item-image {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+.cart-page-wrapper .item-detail {
+  font-size: 0.9rem;
+}
+
+/* Box tăng giảm số lượng */
+.cart-page-wrapper .item-quantity-control {
+  height: 35px;
+}
+
+.cart-page-wrapper .item-quantity-control button {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.cart-page-wrapper .item-quantity-control button:hover {
+  color: #000;
+}
+
+.cart-page-wrapper .item-quantity-control .qty-display {
+  line-height: 35px;
+}
+
+/* Giá tiền & Nút xóa */
+.cart-page-wrapper .item-price {
+  min-width: 110px;
+  text-align: right;
+}
+
+.cart-page-wrapper .cart-large-del {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.cart-page-wrapper .cart-large-del:hover {
+  color: #dc3545 !important;
+}
+
+
+/* =========================================
+   KHUNG BILL TÍNH TIỀN BÊN PHẢI (GIỮ NGUYÊN)
+   ========================================= */
+
+.cart-page-wrapper .cart-summary-box {
+  background: #fafafa;
+  padding: 30px;
+  border-radius: 8px;
+  position: sticky;
+  top: 90px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+}
+
+.cart-page-wrapper .summary-title {
+  font-size: 20px;
+  font-weight: 500;
+  margin-bottom: 25px;
+  color: #333;
+}
+
+.cart-page-wrapper .summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  font-size: 15px;
+  color: #666;
+}
+
+.cart-page-wrapper .summary-bold {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 22px;
+}
+
+.cart-page-wrapper .summary-bold .summary-value {
+  font-size: 16px;
+}
+
+.cart-page-wrapper .summary-warning {
+  color: #c92a2a;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cart-page-wrapper .summary-warning i {
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: normal;
+}
+
+.cart-page-wrapper .summary-divider {
+  border: 0;
+  border-top: 1px solid #e0e0e0;
+  margin: 25px 0;
+}
+
+.cart-page-wrapper .btn-checkout-large {
+  display: block;
+  width: 100%;
+  background-color: #222;
+  color: #fff;
+  text-align: center;
+  padding: 16px;
+  font-weight: 600;
+  font-size: 16px;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.cart-page-wrapper .btn-checkout-large:hover {
+  background-color: #dc3545;
+  color: #fff;
+}
+/* =========================================
+   TRANG THANH TOÁN (CHECKOUT PAGE)
+   ========================================= */
+
+/* --- Cột Trái (Form nhập liệu) --- */
+.checkout-page-wrapper .checkout-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 25px;
+  text-transform: uppercase;
+  color: #333;
+}
+
+.checkout-page-wrapper .checkout-block {
+  margin-bottom: 40px;
+}
+
+.checkout-page-wrapper .ivy-input {
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  padding: 12px 15px;
+  font-size: 14px;
+  box-shadow: none;
+}
+
+.checkout-page-wrapper .ivy-input:focus {
+  border-color: #222;
+  box-shadow: none;
+}
+
+/* Phương thức thanh toán (Radio boxes) */
+.checkout-page-wrapper .payment-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.checkout-page-wrapper .payment-method-item {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ddd;
+  padding: 15px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.checkout-page-wrapper .payment-method-item:hover {
+  border-color: #999;
+}
+
+.checkout-page-wrapper .payment-method-item input[type="radio"] {
+  margin-right: 15px;
+  transform: scale(1.2);
+  accent-color: #222; /* Màu đen chủ đạo */
+}
+
+.checkout-page-wrapper .payment-method-item .payment-name {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* --- Cột Phải (Tóm tắt đơn hàng - Theo hình 4) --- */
+.checkout-page-wrapper .checkout-summary-box {
+  background: #fcfcfc;
+  padding: 30px;
+  border-radius: 8px;
+  position: sticky;
+  top: 90px;
+  border: 1px solid #f0f0f0;
+}
+
+.checkout-page-wrapper .summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  font-size: 15px;
+  color: #666;
+}
+
+.checkout-page-wrapper .summary-total {
+  font-size: 16px;
+  color: #333;
+  margin-top: 10px;
+}
+
+.checkout-page-wrapper .summary-divider {
+  border: 0;
+  border-top: 1px dashed #ddd;
+  margin: 20px 0;
+}
+
+/* Box mã giảm giá */
+.checkout-page-wrapper .discount-box .btn-apply {
+  padding: 10px 20px;
+  font-weight: 600;
+  border-radius: 6px;
+  border-width: 1px;
+  white-space: nowrap;
+}
+
+.checkout-page-wrapper .btn-checkout-large {
+  display: block;
+  width: 100%;
+  background-color: #222;
+  color: #fff;
+  text-align: center;
+  padding: 16px;
+  font-weight: 600;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  text-transform: uppercase;
+  transition: background-color 0.3s ease;
+}
+
+.checkout-page-wrapper .btn-checkout-large:hover {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+
+/* =========================================================
+   CSS CHO TRANG THANH TOÁN THÀNH CÔNG (Style IVY moda)
+   ========================================================= */
+
+
+/* 1. NỀN TRANG BÊN NGOÀI:
+   Ta đổi màu nền bên ngoài thành xám rất nhạt (#f8f9fa hoặc #f4f4f4)
+   để làm nổi bật cái khung màu trắng giống như img2 */
+.success-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 100px 0; /* Tăng padding để card nằm tách biệt khỏi header/footer */
+  background-color: #f8f9fa; /* Màu nền xám nhạt như img2 */
+  min-height: 70vh; /* Đảm bảo chiều cao tối thiểu */
+}
+
+/* 2. KHUNG NỘI DUNG (THE CARD):
+   Đây là nơi ta tạo khung, nền trắng và shadow đậm, lan tỏa giống img2 */
+.success-card {
+  text-align: center;
+  max-width: 550px; /* Tăng nhẹ độ rộng khung */
+  width: 100%;
+  margin: 0 auto;
+  background: #fff; /* Nền trắng tinh khôi bên trong khung */
+  padding: 60px 50px; /* Tăng padding trong khung cho thoáng */
+  border-radius: 8px; /* Bo góc nhẹ nhàng giống img2 */
+
+  /* 💡 BÍ KÍP Ở ĐÂY: Tạo độ shadow lan tỏa sâu như img2 */
+  /* Thông số: ngang 0, dọc 4px, độ lan 20px, màu đen mờ 0.08 */
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+
+  /* Tùy chọn: Thêm border siêu mờ nếu muốn định hình rõ hơn,
+     nhưng thường shadow là đủ */
+  /* border: 1px solid #e1e1e1; */
+}
+
+/* --- Các class bên dưới giữ nguyên --- */
+.icon-check {
+  font-size: 80px;
+  color: #222;
+  margin-bottom: 25px;
+}
+
+.success-title {
+  color: #222;
+  font-size: 26px; /* Tăng nhẹ font title */
   font-weight: bold;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.success-text {
+  color: #555;
+  font-size: 15px;
+  line-height: 1.8; /* Tăng line-height cho dễ đọc */
+  margin-bottom: 12px;
+}
+
+.order-id {
+  color: #222;
+  font-weight: bold;
+  font-size: 19px;
+}
+
+.btn-ivy {
+  display: inline-block;
+  background-color: #222;
+  color: #fff;
+  padding: 15px 40px; /* Tăng size nút bấm cho sang */
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 4px;
+  margin-top: 30px;
+  transition: 0.3s;
+  border: 1px solid #222;
+  text-transform: uppercase; /* Viết hoa chữ trong nút */
+}
+
+.btn-ivy:hover {
+  background-color: #fff;
+  color: #222;
 }

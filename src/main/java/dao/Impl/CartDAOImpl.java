@@ -154,4 +154,18 @@ public class CartDAOImpl implements CartDAO {
         }
         return false;
     }
+
+    @Override
+    public void clearCartByUserId(int userId) {
+        String sql = "DELETE FROM cart WHERE user_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, userId);
+            stmt.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 }

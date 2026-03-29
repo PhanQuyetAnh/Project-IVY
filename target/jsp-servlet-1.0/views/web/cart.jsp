@@ -1,144 +1,111 @@
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<%@ page import="java.util.List" %>
-<%@ page import="model.CartObject" %>
-<%@ page language="java" contentType="text/html; charset=UTF-8"
-         pageEncoding="UTF-8"%>
-<%@include file="/common/taglib.jsp"%>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Giỏ hàng</title>
-</head>
-<body>
-<div class="cart-detail">
-    <div class="container">
-        <div class="row">
-            <div class="col-xl-8">
-                <div class="checkout-process-bar">
-                    <div class="inner-line"></div>
-                    <ul>
-                        <li>
-                            <div class="inner-dot active"></div> <span>Giỏ hàng</span>
-                        </li>
-                        <li>
-                            <div class="inner-dot"></div> <span>Đặt hàng</span>
-                        </li>
-                        <li>
-                            <div class="inner-dot"></div> <span>Thanh toán</span>
-                        </li>
-                        <li>
-                            <div class="inner-dot"></div> <span>Hoàn thành đơn</span>
-                        </li>
-                    </ul>
-                </div>
-                <div class="box-list-product">
-                    <form action="/jsp-servlet/customer/update-cart" method="post">
-                        <h3 class="inner-title">
-                            Giỏ hàng của bạn <span>${totalQuantity} Sản Phẩm</span>
-                        </h3>
-                        <div class="cart-table mt-4">
-                            <table class="table table-striper">
-                                <thead>
-                                <tr>
-                                    <th>Ảnh</th>
-                                    <th>Tên sản phẩm</th>
-                                    <th>Số lượng</th>
-                                    <th>Tổng tiền</th>
-                                    <th></th>
-                                </tr>
-                                </thead>
-                                <tbody>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
 
-                                <c:forEach var="item" items="${cartItems}" varStatus="status">
-                                    <tr>
-                                        <input type="hidden" name="productId" value="${item.productObject.productId}">
-                                        <input type="hidden" name="size" value="${item.productSize}">
-                                        <td><img src="${pageContext.request.contextPath}${item.productObject.productImage}"></td>
-                                        <td>
-                                            <div class="width-table">
-                                                <div>${item.productObject.productName}</div>
-                                                <div class="fontsize-14">
-                                                    Màu sắc: ${item.productObject.productColor}
-                                                    <div>Size: ${item.productSize}</div>
-                                                </div>
+<div class="cart-page-wrapper container">
+    <h2 class="cart-page-title">
+        Giỏ hàng của bạn <span>${fn:length(sessionScope.cart)} Sản Phẩm</span>
+    </h2>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div id="miniCartItems" class="cart-large-items">
+                <c:choose>
+                    <c:when test="${empty sessionScope.cart}">
+                        <ul class="mini-cart-list">
+                            <li class="mini-cart-empty">Giỏ hàng trống</li>
+                        </ul>
+                    </c:when>
+                    <c:otherwise>
+                        <ul class="mini-cart-list">
+                            <c:forEach var="item" items="${sessionScope.cart}">
+                                <c:if test="${not empty item.productObject}">
+                                    <c:set var="p" value="${item.productObject}" />
+
+                                    <li class="cart-item d-flex align-items-center justify-content-between border-bottom py-3">
+
+                                        <div class="d-flex align-items-center">
+                                            <div class="item-image-wrapper me-3">
+                                                <img src="<c:url value='${p.productImage}'/>" alt="${p.productName}" class="img-fluid item-image" />
                                             </div>
-                                        </td>
-                                        <td>
-                                            <div class="quantity">
-                                                <button class="section-5-down">-</button>
-                                                <input type="number" min="0" name="quantity" value="${item.quantity}">
-                                                <button class="section-5-up">+</button>
+
+                                            <div class="item-info-left">
+                                                <p class="item-name mb-1 fw-bold text-uppercase">${p.productName}</p>
+                                                <p class="item-detail text-muted mb-0">
+                                                    <span>Màu: ${empty p.productColor ? 'Mặc định' : p.productColor}</span> | <span>Size: ${item.productSize}</span>
+                                                </p>
                                             </div>
-                                        </td>
-                                        <td>
-                                            <fmt:formatNumber value="${item.productObject.productPrice * item.quantity}"
-                                                              type="number" groupingUsed="true" />đ
-                                        </td>
-                                        <td><a href="/jsp-servlet/customer/cart-delete-item?productId=${item.productObject.productId}&size=${item.productSize}">
-                                            <i class="fa-solid fa-trash-can"></i>
-                                        </a></td>
-                                    </tr>
-                                </c:forEach>
-                                </tbody>
-                            </table>
-                        </div>
-<%--                        <div class="inner-button" style="text-align: right">--%>
-<%--                            <button type="submit" class="button-outline button-main" style="width: 150px">Cập nhật</button>--%>
-<%--                        </div>--%>
-                    </form>
+                                        </div>
 
+                                        <div class="item-action-right d-flex align-items-center">
 
-                </div>
-            </div>
-            <div class="col-xl-4">
-                <div class="inner-position">
-                    <div class="cart-summary">
-                        <h3 class="cart-summary-title">Tổng tiền giỏ hàng</h3>
-                        <div class="cart-summary-item">
-                            <p>Tổng sản phẩm</p>
-                            <div>${totalQuantity}</div>
-                        </div>
-                        <div class="cart-summary-item">
-                            <p>Tổng tiền hàng</p>
-                            <div>
-                                <fmt:formatNumber value="${totalPrice}" type="number" groupingUsed="true" />đ
-                            </div>
-                        </div>
-                        <div class="cart-summary-item">
-                            <p>Thành tiền</p>
-                            <span>
-                                <fmt:formatNumber value="${totalPrice}" type="number" groupingUsed="true" />đ
-                            </span>
-                        </div>
-                        <div class="cart-summary-item">
-                            <p>Tạm tính</p>
-                            <span>
-                                <fmt:formatNumber value="${totalPrice}" type="number" groupingUsed="true" />đ
-                            </span>
-                        </div>
-                        <div class="cart-summary-note">
-                            <div class="inner-icon">
-                                <i class="bi bi-info-circle"></i>
-                            </div>
-                            <p>Sản phẩm nằm trong chương trình đồng giá, giảm giá trên
-                                50% không hỗ trợ đổi trả</p>
-                        </div>
-                    </div>
-                    <div class="inner-button">
-                        <a href="#" class="button-outline button-main">ĐẶT HÀNG</a>
-                    </div>
-                </div>
+                                            <div class="item-quantity-control d-flex align-items-center border rounded-pill me-4">
+                                                <button class="btn-qty-down border-0 bg-transparent px-2" data-product-id="${p.productId}" data-product-size="${item.productSize}">−</button>
+                                                <span class="qty-display px-3 border-start border-end">${item.quantity}</span>
+                                                <button class="btn-qty-up border-0 bg-transparent px-2" data-product-id="${p.productId}" data-product-size="${item.productSize}">+</button>
+                                            </div>
+
+                                            <p class="item-price mb-0 fw-bold text-dark fs-5 me-4">
+                                                <fmt:formatNumber value="${p.productPrice * item.quantity}" pattern="###,###"/>đ
+                                            </p>
+
+                                            <button class="btn-remove-item cart-large-del border-0 bg-transparent text-secondary fs-5" data-product-id="${p.productId}" data-product-size="${item.productSize}">
+                                                <i class="fa-solid fa-trash-can"></i>
+                                            </button>
+
+                                        </div>
+                                    </li>
+
+                                </c:if>
+                            </c:forEach>
+                        </ul>
+                    </c:otherwise>
+                </c:choose>
             </div>
         </div>
-        <div class="row mt-3">
-            <div class="inner-button">
-                <a href="http://localhost:8080/jsp-servlet/public/trang-chu" class="button-outline"> <i class="bi bi-arrow-left"></i>
-                    Tiếp tục mua hàng
-                </a>
+
+        <div class="col-lg-4">
+            <div class="cart-summary-box">
+                <h3 class="summary-title">Tổng tiền giỏ hàng</h3>
+
+                <c:set var="totalQty" value="0" />
+                <c:set var="sum" value="0" />
+                <c:forEach var="item" items="${sessionScope.cart}">
+                    <c:if test="${not empty item.productObject}">
+                        <c:set var="totalQty" value="${totalQty + item.quantity}" />
+                        <c:set var="sum" value="${sum + (item.productObject.productPrice * item.quantity)}" />
+                    </c:if>
+                </c:forEach>
+
+                <div class="summary-row">
+                    <span class="summary-label">Tổng sản phẩm</span>
+                    <span class="summary-value">${totalQty}</span>
+                </div>
+
+                <div class="summary-row">
+                    <span class="summary-label">Tổng tiền hàng</span>
+                    <span class="summary-value"><fmt:formatNumber value="${sum}" pattern="###,###"/>đ</span>
+                </div>
+
+                <div class="summary-row summary-bold">
+                    <span class="summary-label">Thành tiền</span>
+                    <span class="summary-value"><fmt:formatNumber value="${sum}" pattern="###,###"/>đ</span>
+                </div>
+
+                <div class="summary-row summary-bold">
+                    <span class="summary-label">Tạm tính</span>
+                    <span class="summary-value"><fmt:formatNumber value="${sum}" pattern="###,###"/>đ</span>
+                </div>
+
+                <div class="summary-warning">
+                    <i class="fa-solid fa-circle-exclamation"></i> Không thanh toán cho Shipper khi chưa nhận hàng !
+                </div>
+
+                <hr class="summary-divider">
+
+                <a href="${pageContext.request.contextPath}/customer/checkout" class="btn-checkout-large">ĐẶT HÀNG</a>
             </div>
         </div>
     </div>
 </div>
-</body>
-</html>

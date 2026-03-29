@@ -20,6 +20,11 @@ public class OrderObject {
     private String paymentStatus;
     private String paymentMethod;
     private String orderNote;
+    private String shippingName;
+    private String shippingPhone;
+    private String shippingAddress;
+    private double discountAmount;
+    private Integer voucherId;
     private UserObject userObject;
     private List<OrderDetailObject> orderDetailList;
 }

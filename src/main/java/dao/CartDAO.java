@@ -17,4 +17,6 @@ public interface CartDAO {
     boolean updateCart(int userId, int productId, int quantity, String productSize);
 
     boolean deleteCartItem(int userId, int productId, String size);
+    // Xóa toàn bộ giỏ hàng của user sau khi thanh toán thành công
+    void clearCartByUserId(int userId);
 }

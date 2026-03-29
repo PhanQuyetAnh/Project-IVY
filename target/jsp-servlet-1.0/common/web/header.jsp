@@ -126,7 +126,7 @@
           </ul>
         </nav>
         <div class="inner-logo">
-          <a href="trang-chu">
+          <a href="${pageContext.request.contextPath}/public/trang-chu">
             <img src="<c:url value='/templates/web/images/logo.png'/>" alt="IVY moda" />
           </a>
         </div>
@@ -180,7 +180,7 @@
                         <a href="#">${sessionScope.user.fullname}</a>
                       </div>
                       <li><a href="profile">Thông tin tài khoản</a></li>
-                      <li><a href="orders">Quản lý đơn hàng</a></li>
+                      <li><a href="${pageContext.request.contextPath}/customer/order-history">Quản lý đơn hàng</a></li>
                       <li><a href="wishlist">Danh sách yêu thích</a></li>
                       <li><a href="addresses">Địa chỉ giao hàng</a></li>
                       <li><a href="javascript:void(0)" onclick="confirmLogout()">Đăng xuất</a></li>

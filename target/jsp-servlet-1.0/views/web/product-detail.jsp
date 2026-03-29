@@ -269,7 +269,9 @@
             $quantitySpan.text(currentQuantity);
         });
 
-        // 6. Logic nút "Thêm vào giỏ" - gửi AJAX
+        // ==========================================
+        // 6. THÊM VÀO GIỎ HÀNG (.add)
+        // ==========================================
         $(".add").click(function(e) {
             e.preventDefault();
 
@@ -283,8 +285,8 @@
                 return false;
             }
 
-            // Lấy thông tin sản phẩm
-            const productId = '${product.productId}';
+            // Lấy thông tin (Sửa lại biến lấy quantity cho đúng HTML của bạn)
+            const productId = '${product.productId}'; // Sửa thành productId theo chuẩn class của bạn
             const selectedSize = $(".product-detail__size-input p.active-size").text().trim();
             const quantity = parseInt($(".product-detail__num span").text());
 
@@ -303,12 +305,9 @@
                 },
                 success: function(response) {
                     if (response.status === 'success') {
-                        // Hiển thị toast message
                         showToast('Thêm sản phẩm vào giỏ hàng thành công!');
-
-                        // SỬA Ở ĐÂY: Thay vì gọi hàm ảo, gọi đúng hàm refreshCartUI của cart.js
                         if (typeof refreshCartUI === 'function') {
-                            refreshCartUI(false); // Cập nhật ngầm, không tự xổ Sidebar ra
+                            refreshCartUI(false);
                         }
                     } else {
                         showToast(response.message);
@@ -320,19 +319,52 @@
             });
         });
 
-        // 7. Logic nút "Mua hàng" - kiểm tra login + size
-        $(".buy").click(function() {
+        // ==========================================
+        // 7. MUA HÀNG NGAY (.buy)
+        // ==========================================
+        $(".buy").click(function(e) {
+            e.preventDefault();
+
             if (!isLoggedIn) {
                 showToast("Vui lòng đăng nhập để thực hiện chức năng này!");
                 return false;
             }
 
             if (!isSelectedSize()) {
-                showToast("Vui lòng chọn size sản phẩm!");
+                showToast("Vui lòng chọn size sản phẩm trước khi mua hàng!");
                 return false;
             }
 
-            console.log("Mua hàng thành công!");
+            // Lấy thông tin giống hệt nút Thêm vào giỏ
+            const productId = '${product.productId}'; // Dùng productId để tránh lỗi 500
+            const selectedSize = $(".product-detail__size-input p.active-size").text().trim();
+            const quantity = parseInt($(".product-detail__num span").text());
+
+            // Gửi AJAX đẩy vào Giỏ hàng, thành công thì chuyển trang luôn
+            $.ajax({
+                url: '${pageContext.request.contextPath}/customer/add-to-cart', // Dùng chung API thêm vào giỏ
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    product_id: productId,
+                    size: selectedSize,
+                    quantity: quantity
+                },
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // CHUYỂN TRANG THẲNG SANG GIỎ HÀNG LỚN (HOẶC CHECKOUT TÙY BẠN)
+                        window.location.href = '${pageContext.request.contextPath}/customer/cart';
+                    } else {
+                        showToast(response.message);
+                    }
+                },
+                error: function() {
+                    showToast('Có lỗi xảy ra, vui lòng thử lại!');
+                }
+            });
         });
 
         // 8. Logic nút "Yêu thích" - kiểm tra login
@@ -341,9 +373,7 @@
                 showToast("Vui lòng đăng nhập để thực hiện chức năng này!");
                 return false;
             }
-
             $(this).toggleClass("active");
-            console.log("Cập nhật yêu thích thành công!");
         });
 
         // 9. Logic Carousel zoom
@@ -357,6 +387,7 @@
         $('.carousel-item').mouseleave(function() {
             $(this).find('img').css('transform-origin', 'center center');
         });
+
     });
 </script>
 
