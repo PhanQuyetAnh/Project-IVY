@@ -42,13 +42,13 @@ $(document).ready(function() {
                     // 3. Cập nhật số tiền cuối cùng
                     $("#final-total-display").text(totalAfter.toLocaleString() + "đ");
 
-                    alert("Áp dụng mã " + voucherCode + " thành công!");
+                    showToast("Áp dụng mã " + voucherCode + " thành công!");
                 } else {
                     alert(response.message);
                 }
             },
             error: function() {
-                alert("Không thể kết nối với máy chủ để kiểm tra mã!");
+                showToast("Không thể kết nối với máy chủ để kiểm tra mã!");
             }
         });
     });
