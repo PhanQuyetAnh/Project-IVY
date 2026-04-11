@@ -223,11 +223,12 @@
             </li>
 
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="/jsp-servlet/public/login">
+              <a class="dropdown-item d-flex align-items-center" href="javascript:void(0)" onclick="confirmLogout()">
                 <i class="bi bi-box-arrow-right"></i>
                 <span>Đăng xuất</span>
               </a>
             </li>
+
           </ul>
           <!-- End Profile Dropdown Items -->
         </li>
@@ -237,3 +238,16 @@
     <!-- End Icons Navigation -->
   </header>
 <!-- End Header -->
+
+<script>
+  function confirmLogout() {
+    if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống IVY moda không?")) {
+      // Xóa chat history trước khi logout
+      if (window.clearChatHistoryOnLogout) {
+        window.clearChatHistoryOnLogout();
+      }
+      // Chuyển hướng đến servlet logout
+      window.location.href = '${pageContext.request.contextPath}/logout';
+    }
+  }
+</script>

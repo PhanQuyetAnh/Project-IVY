@@ -20,5 +20,6 @@ public interface UserDAO {
     public Map<String, Integer> getNewUsersByMonth();
     public Map<String, Integer> getUserRoleCounts();
     public boolean insertUser(UserObject user);
+    public boolean updateUser(UserObject user);
     public List<UserObject> getInactiveSoonUsers(int limit);
 }

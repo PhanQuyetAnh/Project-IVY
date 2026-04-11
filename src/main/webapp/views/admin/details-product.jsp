@@ -45,7 +45,7 @@
                                             <p><strong>Danh mục: </strong></p>
                                         </div>
                                         <div class="col-md-6">
-                                            <p id="productCategory" style="margin-left: 30px;">${product.productCategory}</p>
+                                            <p id="productCategory" style="margin-left: 30px;">${product.categoryName}</p>
                                         </div>
                                     </div>
                                     <div class="col-md-6 d-flex">

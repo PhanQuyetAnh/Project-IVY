@@ -2,8 +2,8 @@ package controller.admin;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -18,7 +18,10 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 
 import dao.IProductDAO;
 import dao.Impl.ProductImpl;
+import dao.CategoryDAO;
+import dao.Impl.CategoryDAOImpl;
 import model.ProductObject;
+import model.CategoryObject;
 
 /**
  * Servlet implementation class RepairProduct
@@ -26,26 +29,46 @@ import model.ProductObject;
 @WebServlet("/admin/admin-repair-product")
 public class RepairProduct extends HttpServlet {
     private static final long serialVersionUID = 1L;
+
     private IProductDAO productDAO;
+    private CategoryDAO categoryDAO;
 
     public void init() {
         productDAO = new ProductImpl();
+        categoryDAO = new CategoryDAOImpl();
+    }
+
+    // Hàm đệ quy làm phẳng cây Menu để đưa vào thẻ <select>
+    private List<CategoryObject> getFlatCategoryList() {
+        List<CategoryObject> tree = categoryDAO.getMenuTree();
+        List<CategoryObject> flatList = new ArrayList<>();
+        for (CategoryObject root : tree) {
+            flatList.add(root);
+            if (root.getChildren() != null) {
+                for (CategoryObject child : root.getChildren()) {
+                    flatList.add(child);
+                    if (child.getChildren() != null) {
+                        flatList.addAll(child.getChildren());
+                    }
+                }
+            }
+        }
+        return flatList;
     }
 
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String id = request.getParameter("id");
         ProductObject product = null;
-        List<String> categories = null;
+        List<CategoryObject> categories = null;
+
         try {
             product = productDAO.getProductById(Integer.parseInt(id));
-            categories = productDAO.getAllProducts().stream()
-                    .map(ProductObject::getProductCategory)
-                    .distinct()
-                    .collect(Collectors.toList());
+            categories = getFlatCategoryList(); // ĐÃ SỬA: Lấy danh mục từ CategoryDAO
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("error", "Lỗi khi tải dữ liệu sản phẩm.");
         }
+
         request.setAttribute("product", product);
         request.setAttribute("categories", categories);
         RequestDispatcher rd = request.getRequestDispatcher("/views/admin/repair-product.jsp");
@@ -78,8 +101,8 @@ public class RepairProduct extends HttpServlet {
                             case "productPrice":
                                 product.setProductPrice(Double.parseDouble(fieldValue));
                                 break;
-                            case "productCategory":
-                                product.setProductCategory(fieldValue);
+                            case "categoryId": // ĐÃ SỬA: Lấy ID danh mục (int) thay vì productCategory (String)
+                                product.setCategoryId(Integer.parseInt(fieldValue));
                                 break;
                             case "productColor":
                                 product.setProductColor(fieldValue);
@@ -94,7 +117,7 @@ public class RepairProduct extends HttpServlet {
                                 product.setProductDescription(fieldValue);
                                 break;
                             case "productImagePath":
-                                imagePath = fieldValue;
+                                imagePath = fieldValue; // Đây là đường dẫn ảnh cũ
                                 break;
                         }
                     } else if (item.getFieldName().equals("productImage") && item.getSize() > 0) {
@@ -105,16 +128,18 @@ public class RepairProduct extends HttpServlet {
                             uploadDir.mkdirs();
                         }
                         String uniqueFileName = System.currentTimeMillis() + "_" + fileName;
-                        imagePath = "/templates/admin/img/" + uniqueFileName;
+                        String newImagePath = "/templates/admin/img/" + uniqueFileName;
                         File storeFile = new File(uploadPath + File.separator + uniqueFileName);
                         item.write(storeFile);
-                        product.setProductImage(imagePath);
+
+                        // ĐÃ SỬA: Đặt ảnh vào đúng thuộc tính Image1 (giống hàm Update trong DAO)
+                        product.setProductImage1(newImagePath);
                     }
                 }
 
-                // Nếu không có ảnh mới, sử dụng ảnh cũ
-                if (product.getProductImage() == null && imagePath != null && !imagePath.isEmpty()) {
-                    product.setProductImage(imagePath);
+                // Nếu người dùng không upload ảnh mới, sử dụng lại ảnh cũ
+                if (product.getProductImage1() == null && imagePath != null && !imagePath.isEmpty()) {
+                    product.setProductImage1(imagePath);
                 }
 
                 // Server-side validation
@@ -128,7 +153,7 @@ public class RepairProduct extends HttpServlet {
                 if (product.getProductPrice() <= 0) {
                     errors.append("Giá sản phẩm phải là số dương.\n");
                 }
-                if (product.getProductCategory() == null || product.getProductCategory().trim().isEmpty()) {
+                if (product.getCategoryId() <= 0) { // ĐÃ SỬA: Validate ID danh mục
                     errors.append("Danh mục không được để trống.\n");
                 }
                 if (product.getProductColor() == null || product.getProductColor().trim().isEmpty()) {
@@ -148,10 +173,7 @@ public class RepairProduct extends HttpServlet {
                     System.out.println("Validation errors: " + errors.toString());
                     request.setAttribute("error", errors.toString());
                     request.setAttribute("product", product);
-                    request.setAttribute("categories", productDAO.getAllProducts().stream()
-                            .map(ProductObject::getProductCategory)
-                            .distinct()
-                            .collect(Collectors.toList()));
+                    request.setAttribute("categories", getFlatCategoryList()); // Nạp lại danh mục khi có lỗi
                     RequestDispatcher rd = request.getRequestDispatcher("/views/admin/repair-product.jsp");
                     rd.forward(request, response);
                     return;
@@ -170,10 +192,7 @@ public class RepairProduct extends HttpServlet {
                 System.out.println("Error updating product: " + e.getMessage());
                 request.setAttribute("error", "Lỗi khi cập nhật sản phẩm: " + e.getMessage());
                 request.setAttribute("product", product);
-                request.setAttribute("categories", productDAO.getAllProducts().stream()
-                        .map(ProductObject::getProductCategory)
-                        .distinct()
-                        .collect(Collectors.toList()));
+                request.setAttribute("categories", getFlatCategoryList());
                 RequestDispatcher rd = request.getRequestDispatcher("/views/admin/repair-product.jsp");
                 rd.forward(request, response);
             }

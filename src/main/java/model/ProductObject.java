@@ -20,7 +20,8 @@ public class ProductObject {
 	private String productColor;
 	private String productSize;
 	private String productDescription;
-	private String productCategory;
+	private int categoryId;
+	private String categoryName;
 	private Date createdAt;
 	private Date updateAt;
 	private boolean isDeleted;

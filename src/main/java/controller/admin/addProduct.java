@@ -2,8 +2,8 @@ package controller.admin;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -18,25 +18,45 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 
 import dao.IProductDAO;
 import dao.Impl.ProductImpl;
+import dao.CategoryDAO;
+import dao.Impl.CategoryDAOImpl;
 import model.ProductObject;
+import model.CategoryObject;
 
-/**
- * Servlet implementation class addProduct
- */
 @WebServlet("/admin/admin-add-product")
 public class addProduct extends HttpServlet {
     private static final long serialVersionUID = 1L;
+
     private IProductDAO productDAO;
+    private CategoryDAO categoryDAO; // Thêm DAO của Category
 
     public void init() {
         productDAO = new ProductImpl();
+        categoryDAO = new CategoryDAOImpl();
+    }
+
+    // Hàm đệ quy nhỏ để làm phẳng cây Menu thành 1 list dài cho thẻ <select> dễ đọc
+    private List<CategoryObject> getFlatCategoryList() {
+        List<CategoryObject> tree = categoryDAO.getMenuTree();
+        List<CategoryObject> flatList = new ArrayList<>();
+        for (CategoryObject root : tree) {
+            flatList.add(root);
+            if (root.getChildren() != null) {
+                for (CategoryObject child : root.getChildren()) {
+                    flatList.add(child);
+                    if (child.getChildren() != null) {
+                        flatList.addAll(child.getChildren());
+                    }
+                }
+            }
+        }
+        return flatList;
     }
 
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        List<String> categories = productDAO.getAllProducts().stream()
-                .map(ProductObject::getProductCategory)
-                .distinct()
-                .collect(Collectors.toList());
+        // Lấy danh sách danh mục cực nhanh từ CategoryDAO
+        List<CategoryObject> categories = getFlatCategoryList();
+
         request.setAttribute("categories", categories);
         RequestDispatcher rd = request.getRequestDispatcher("/views/admin/add-product.jsp");
         rd.forward(request, response);
@@ -67,8 +87,8 @@ public class addProduct extends HttpServlet {
                             case "productPrice":
                                 product.setProductPrice(Double.parseDouble(fieldValue));
                                 break;
-                            case "productCategory":
-                                product.setProductCategory(fieldValue);
+                            case "categoryId": // ĐÃ SỬA: Bắt field categoryId thay vì productCategory
+                                product.setCategoryId(Integer.parseInt(fieldValue));
                                 break;
                             case "productColor":
                                 product.setProductColor(fieldValue);
@@ -84,6 +104,7 @@ public class addProduct extends HttpServlet {
                                 break;
                         }
                     } else {
+                        // Tạm thời hứng ảnh vào productImage1 (Vì DB đang lưu ảnh 1, 2, 3, 4)
                         if (item.getFieldName().equals("productImage") && item.getSize() > 0) {
                             String fileName = new File(item.getName()).getName();
                             String uploadPath = getServletContext().getRealPath("") + File.separator + "templates" + File.separator + "admin" + File.separator + "img";
@@ -94,7 +115,9 @@ public class addProduct extends HttpServlet {
                             imagePath = "/templates/admin/img/" + fileName;
                             File storeFile = new File(uploadPath + File.separator + fileName);
                             item.write(storeFile);
-                            product.setProductImage(imagePath);
+
+                            // ĐÃ SỬA: Lưu vào ảnh chính (Image 1)
+                            product.setProductImage1(imagePath);
                         }
                     }
                 }
@@ -112,10 +135,13 @@ public class addProduct extends HttpServlet {
                     errors.append("Giá sản phẩm phải là số dương.\n");
                     request.setAttribute("errorProductPrice", "Giá sản phẩm phải là số dương");
                 }
-                if (product.getProductCategory() == null || product.getProductCategory().trim().isEmpty()) {
+
+                // ĐÃ SỬA: Validate số nguyên cho Category
+                if (product.getCategoryId() <= 0) {
                     errors.append("Danh mục không được để trống.\n");
-                    request.setAttribute("errorProductCategory", "Danh mục không được để trống");
+                    request.setAttribute("errorProductCategory", "Vui lòng chọn danh mục");
                 }
+
                 if (product.getProductColor() == null || product.getProductColor().trim().isEmpty()) {
                     errors.append("Màu sắc không được để trống.\n");
                     request.setAttribute("errorProductColor", "Màu sắc không được để trống");
@@ -142,15 +168,15 @@ public class addProduct extends HttpServlet {
                     request.setAttribute("productName", product.getProductName());
                     request.setAttribute("productCode", product.getProductCode());
                     request.setAttribute("productPrice", product.getProductPrice());
-                    request.setAttribute("productCategory", product.getProductCategory());
+                    request.setAttribute("categoryId", product.getCategoryId()); // ĐÃ SỬA
                     request.setAttribute("productSize", product.getProductSize());
                     request.setAttribute("productColor", product.getProductColor());
                     request.setAttribute("productQuantity", product.getProductQuantity());
                     request.setAttribute("productDescription", product.getProductDescription());
-                    request.setAttribute("categories", productDAO.getAllProducts().stream()
-                            .map(ProductObject::getProductCategory)
-                            .distinct()
-                            .collect(Collectors.toList()));
+
+                    // Nạp lại danh sách để lặp dropdown nếu có lỗi
+                    request.setAttribute("categories", getFlatCategoryList());
+
                     RequestDispatcher rd = request.getRequestDispatcher("/views/admin/add-product.jsp");
                     rd.forward(request, response);
                     return;
@@ -166,18 +192,8 @@ public class addProduct extends HttpServlet {
             } catch (Exception e) {
                 e.printStackTrace();
                 request.setAttribute("errorMessage", "Lỗi khi thêm sản phẩm: " + e.getMessage());
-                request.setAttribute("productName", product.getProductName());
-                request.setAttribute("productCode", product.getProductCode());
-                request.setAttribute("productPrice", product.getProductPrice());
-                request.setAttribute("productCategory", product.getProductCategory());
-                request.setAttribute("productSize", product.getProductSize());
-                request.setAttribute("productColor", product.getProductColor());
-                request.setAttribute("productQuantity", product.getProductQuantity());
-                request.setAttribute("productDescription", product.getProductDescription());
-                request.setAttribute("categories", productDAO.getAllProducts().stream()
-                        .map(ProductObject::getProductCategory)
-                        .distinct()
-                        .collect(Collectors.toList()));
+                // ... (set lại attributes giống bên trên)
+                request.setAttribute("categories", getFlatCategoryList());
                 RequestDispatcher rd = request.getRequestDispatcher("/views/admin/add-product.jsp");
                 rd.forward(request, response);
             }

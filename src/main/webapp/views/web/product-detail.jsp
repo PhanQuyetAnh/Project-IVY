@@ -16,7 +16,7 @@
             <nav>
                 <ul>
                     <li><a href="<c:url value='/trang-chu'/>">Trang chủ<i class="fa-solid fa-minus"></i></a></li>
-                    <li><a href="#">${product.productCategory}<i class="fa-solid fa-minus"></i></a></li>
+                    <li><a href="#">${product.categoryName}<i class="fa-solid fa-minus"></i></a></li>
                     <li><a href="#">${product.productName}</a></li>
                 </ul>
             </nav>
@@ -128,7 +128,10 @@
                         <div class="product-detail__action">
                             <button class="add">Thêm vào giỏ</button>
                             <button class="buy">Mua hàng</button>
-                            <button class="heart"><i class="bi bi-heart"></i></button>
+<%--                            <button class="heart"><i class="bi bi-heart"></i></button>--%>
+                            <button class="heart ${isLiked ? 'active' : ''}">
+                                <i class="bi ${isLiked ? 'bi-heart-fill text-danger' : 'bi-heart'}"></i>
+                            </button>
                         </div>
                         <div class="product-detail__find">
                             <a>Tìm tại cửa hàng</a>
@@ -367,13 +370,52 @@
             });
         });
 
-        // 8. Logic nút "Yêu thích" - kiểm tra login
-        $(".heart").click(function() {
+
+        // 8. Logic nút "Yêu thích" (Tích hợp AJAX xuống DB)
+        $(".heart").click(function(e) {
+            e.preventDefault(); // Ngăn trình duyệt load lại trang
+
             if (!isLoggedIn) {
                 showToast("Vui lòng đăng nhập để thực hiện chức năng này!");
+                // Hoặc bạn có thể dùng alert, hoặc chuyển hướng sang trang login
+                // window.location.href = '${pageContext.request.contextPath}/login';
                 return false;
             }
-            $(this).toggleClass("active");
+
+            const button = $(this);
+            const icon = button.find('i');
+            const productCode = '${product.productCode}'; // Lấy mã sản phẩm hiện tại
+
+            // Gửi AJAX request xuống API Wishlist
+            $.ajax({
+                url: '${pageContext.request.contextPath}/api/wishlist/toggle',
+                type: 'POST',
+                data: { productCode: productCode }, // Gửi mã sản phẩm
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'unauthorized') {
+                        showToast("Vui lòng đăng nhập lại!");
+                    }
+                    else if (response.status === 'added') {
+                        // Thêm thành công -> Đổi sang tim đặc màu đỏ
+                        button.addClass("active");
+                        icon.removeClass("bi-heart").addClass("bi-heart-fill text-danger");
+
+                        // Nếu bạn có dùng SweetAlert2 thì gọi nó ở đây
+                        // Swal.fire({ position: 'bottom-end', icon: 'success', title: response.message, showConfirmButton: false, timer: 1500, toast: true });
+                        showToast(response.message);
+                    }
+                    else if (response.status === 'removed') {
+                        // Bỏ tim thành công -> Đổi về tim rỗng
+                        button.removeClass("active");
+                        icon.removeClass("bi-heart-fill text-danger").addClass("bi-heart");
+                        showToast(response.message);
+                    }
+                },
+                error: function() {
+                    showToast('Lỗi kết nối, vui lòng thử lại!');
+                }
+            });
         });
 
         // 9. Logic Carousel zoom

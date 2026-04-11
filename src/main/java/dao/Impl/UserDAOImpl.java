@@ -305,6 +305,35 @@ public class UserDAOImpl implements UserDAO {
 	}
 
 	@Override
+	public boolean updateUser(UserObject user) {
+		// Cập nhật tên, sđt, giới tính, địa chỉ và ngày chỉnh sửa
+		String sql = "UPDATE users SET user_fullname = ?, user_phone_number = ?, gender = ?, user_address = ?, user_modified_date = ? WHERE user_id = ?";
+
+		try (Connection conn = DBUtil.getConnection();
+			 PreparedStatement pre = conn.prepareStatement(sql)) {
+
+			// Set auto commit false vì hàm exe() của bạn có gọi conn.commit()
+			conn.setAutoCommit(false);
+
+			pre.setString(1, user.getFullname());
+			pre.setString(2, user.getPhoneNumber());
+			pre.setString(3, user.getGender());
+			pre.setString(4, user.getAddress());
+			// Lấy thời gian hiện tại làm ngày modified_date
+			pre.setTimestamp(5, new java.sql.Timestamp(System.currentTimeMillis()));
+			pre.setInt(6, user.getUserId());
+
+			// Gọi hàm exe() có sẵn của bạn để thực thi và commit
+			return this.exe(conn, pre);
+
+		} catch (SQLException e) {
+			System.err.println("Lỗi updateUser: " + e.getMessage());
+			e.printStackTrace();
+		}
+		return false;
+	}
+
+	@Override
 	public List<UserObject> getInactiveSoonUsers(int limit) {
 		List<UserObject> list = new ArrayList<>();
 		String sql = "SELECT u.*, r.role_name " +

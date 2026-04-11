@@ -6,6 +6,8 @@
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<!-- ChatBot Context Path -->
+	<meta name="contextPath" content="${pageContext.request.contextPath}" />
 
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" />
@@ -34,6 +36,7 @@
 <%@ include file="/common/web/footer.jsp"%>
 <% } %>
 
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
@@ -45,5 +48,7 @@
 <script src="<c:url value='/templates/web/js/jquery-saleT5.js'/>"></script>
 <script src="<c:url value='/templates/web/js/cart.js'/>"></script>
 <script src="<c:url value='/templates/web/js/checkout.js'/>"></script>
+<!-- ChatBot JavaScript - Phải load sau jQuery -->
+<script src="<c:url value='/templates/web/js/chatbot.js'/>"></script>
 </body>
 </html>

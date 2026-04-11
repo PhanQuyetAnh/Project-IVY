@@ -57,7 +57,7 @@ public class ProductImpl implements IProductDAO {
                 p.setProductColor(rs.getString("product_color"));
                 p.setProductSize(rs.getString("product_size"));
                 p.setProductDescription(rs.getString("product_description"));
-                p.setProductCategory(rs.getString("product_category"));
+                p.setCategoryId(rs.getInt("category_id"));
                 p.setCreatedAt(rs.getDate("created_at"));
                 p.setUpdateAt(rs.getDate("updated_at"));
                 p.setDeleted(rs.getBoolean("isDeleted"));
@@ -71,7 +71,8 @@ public class ProductImpl implements IProductDAO {
 
     @Override
     public ProductObject getProductById(int id) {
-        String sql = "SELECT * FROM Product WHERE id = ? AND isDeleted = FALSE";
+        // ĐÃ SỬA: Thêm LEFT JOIN lấy tên danh mục cho trang detail.jsp
+        String sql = "SELECT p.*, c.category_name FROM Product p LEFT JOIN category c ON p.category_id = c.category_id WHERE p.id = ? AND p.isDeleted = FALSE";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -81,7 +82,7 @@ public class ProductImpl implements IProductDAO {
                 p.setProductId(rs.getInt("id"));
                 p.setProductCode(rs.getString("product_code"));
                 p.setProductName(rs.getString("product_name"));
-                p.setProductImage(rs.getString("product_image1")); // Ảnh chính
+                p.setProductImage(rs.getString("product_image1"));
                 p.setProductImage1(rs.getString("product_image1"));
                 p.setProductImage2(rs.getString("product_image2"));
                 p.setProductImage3(rs.getString("product_image3"));
@@ -91,7 +92,10 @@ public class ProductImpl implements IProductDAO {
                 p.setProductColor(rs.getString("product_color"));
                 p.setProductSize(rs.getString("product_size"));
                 p.setProductDescription(rs.getString("product_description"));
-                p.setProductCategory(rs.getString("product_category"));
+
+                p.setCategoryId(rs.getInt("category_id"));
+                p.setCategoryName(rs.getString("category_name")); // Lấy tên danh mục
+
                 p.setCreatedAt(rs.getDate("created_at"));
                 p.setUpdateAt(rs.getDate("updated_at"));
                 p.setDeleted(rs.getBoolean("isDeleted"));
@@ -142,7 +146,7 @@ public class ProductImpl implements IProductDAO {
         StringBuilder sql = new StringBuilder("INSERT INTO Product(");
         sql.append("product_code,product_name,product_image1,product_image2,product_image3,product_image4,");
         sql.append("product_price,product_quantity,product_color,product_size,");
-        sql.append("product_description,product_category,isDeleted,created_at,updated_at");
+        sql.append("product_description,category_id,isDeleted,created_at,updated_at");
         sql.append(") VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pre = conn.prepareStatement(sql.toString())) {
@@ -158,7 +162,7 @@ public class ProductImpl implements IProductDAO {
             pre.setString(9, product.getProductColor());
             pre.setString(10, product.getProductSize());
             pre.setString(11, product.getProductDescription());
-            pre.setString(12, product.getProductCategory());
+            pre.setInt(12, product.getCategoryId());
             pre.setBoolean(13, false); // Mặc định isDeleted = false
             pre.setTimestamp(14, new Timestamp(System.currentTimeMillis())); // created_at
             pre.setTimestamp(15, null); // updated_at
@@ -174,7 +178,7 @@ public class ProductImpl implements IProductDAO {
         StringBuilder sql = new StringBuilder("UPDATE Product SET ");
         sql.append("product_code=?, product_name=?, product_image1=?, product_image2=?, ");
         sql.append("product_image3=?, product_image4=?, product_price=?, product_quantity=?, ");
-        sql.append("product_color=?, product_size=?, product_description=?, product_category=?, ");
+        sql.append("product_color=?, product_size=?, product_description=?, category_id=?, ");
         sql.append("isDeleted=?, updated_at=? WHERE id=?");
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pre = conn.prepareStatement(sql.toString())) {
@@ -190,7 +194,7 @@ public class ProductImpl implements IProductDAO {
             pre.setString(9, product.getProductColor());
             pre.setString(10, product.getProductSize());
             pre.setString(11, product.getProductDescription());
-            pre.setString(12, product.getProductCategory());
+            pre.setInt(12, product.getCategoryId());
             pre.setBoolean(13, product.isDeleted());
             pre.setTimestamp(14, new Timestamp(System.currentTimeMillis())); // updated_at
             pre.setInt(15, product.getProductId());
@@ -237,7 +241,7 @@ public class ProductImpl implements IProductDAO {
                 p.setProductColor(rs.getString("product_color"));
                 p.setProductSize(rs.getString("product_size"));
                 p.setProductDescription(rs.getString("product_description"));
-                p.setProductCategory(rs.getString("product_category"));
+                p.setCategoryId(rs.getInt("category_id"));
                 p.setCreatedAt(rs.getDate("created_at"));
                 p.setUpdateAt(rs.getDate("updated_at"));
                 p.setDeleted(rs.getBoolean("isDeleted"));
