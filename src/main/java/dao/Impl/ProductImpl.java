@@ -70,6 +70,89 @@ public class ProductImpl implements IProductDAO {
     }
 
     @Override
+    public List<ProductObject> getProductsByCategoryId(int categoryId) {
+        List<ProductObject> list = new ArrayList<>();
+        // Câu lệnh SQL lọc theo category_id
+        String sql = "SELECT p.*, c.category_name FROM Product p LEFT JOIN category c ON p.category_id = c.category_id WHERE p.category_id = ? AND p.isDeleted = FALSE ORDER BY p.id DESC";
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, categoryId); // Truyền ID danh mục vào câu query
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                ProductObject p = new ProductObject();
+                p.setProductId(rs.getInt("id"));
+                p.setProductCode(rs.getString("product_code"));
+                p.setProductName(rs.getString("product_name"));
+                p.setProductImage(rs.getString("product_image1"));
+                p.setProductImage1(rs.getString("product_image1"));
+                p.setProductImage2(rs.getString("product_image2"));
+                p.setProductImage3(rs.getString("product_image3"));
+                p.setProductImage4(rs.getString("product_image4"));
+                p.setProductPrice(rs.getDouble("product_price"));
+                p.setProductQuantity(rs.getInt("product_quantity"));
+                p.setProductColor(rs.getString("product_color"));
+                p.setProductSize(rs.getString("product_size"));
+                p.setProductDescription(rs.getString("product_description"));
+
+                p.setCategoryId(rs.getInt("category_id"));
+                p.setCategoryName(rs.getString("category_name"));
+
+                p.setCreatedAt(rs.getDate("created_at"));
+                p.setUpdateAt(rs.getDate("updated_at"));
+                p.setDeleted(rs.getBoolean("isDeleted"));
+                list.add(p);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    @Override
+    public List<ProductObject> getDiscountedProducts() {
+        List<ProductObject> list = new ArrayList<>();
+        String sql = "SELECT p.*, c.category_name FROM Product p LEFT JOIN category c ON p.category_id = c.category_id WHERE p.discount_percent > 0 AND p.isDeleted = FALSE ORDER BY p.id DESC";
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                ProductObject p = new ProductObject();
+                p.setProductId(rs.getInt("id"));
+                p.setProductCode(rs.getString("product_code"));
+                p.setProductName(rs.getString("product_name"));
+                p.setProductImage(rs.getString("product_image1"));
+                p.setProductImage1(rs.getString("product_image1"));
+                p.setProductImage2(rs.getString("product_image2"));
+                p.setProductImage3(rs.getString("product_image3"));
+                p.setProductImage4(rs.getString("product_image4"));
+                p.setProductPrice(rs.getDouble("product_price"));
+                // ĐÃ BỔ SUNG LẤY % GIẢM GIÁ
+                p.setDiscountPercent(rs.getInt("discount_percent"));
+                p.setProductQuantity(rs.getInt("product_quantity"));
+                p.setProductColor(rs.getString("product_color"));
+                p.setProductSize(rs.getString("product_size"));
+                p.setProductDescription(rs.getString("product_description"));
+
+                p.setCategoryId(rs.getInt("category_id"));
+                p.setCategoryName(rs.getString("category_name"));
+
+                p.setCreatedAt(rs.getDate("created_at"));
+                p.setUpdateAt(rs.getDate("updated_at"));
+                p.setDeleted(rs.getBoolean("isDeleted"));
+                list.add(p);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    @Override
     public ProductObject getProductById(int id) {
         // ĐÃ SỬA: Thêm LEFT JOIN lấy tên danh mục cho trang detail.jsp
         String sql = "SELECT p.*, c.category_name FROM Product p LEFT JOIN category c ON p.category_id = c.category_id WHERE p.id = ? AND p.isDeleted = FALSE";
@@ -88,6 +171,7 @@ public class ProductImpl implements IProductDAO {
                 p.setProductImage3(rs.getString("product_image3"));
                 p.setProductImage4(rs.getString("product_image4"));
                 p.setProductPrice(rs.getDouble("product_price"));
+                p.setDiscountPercent(rs.getInt("discount_percent"));
                 p.setProductQuantity(rs.getInt("product_quantity"));
                 p.setProductColor(rs.getString("product_color"));
                 p.setProductSize(rs.getString("product_size"));
@@ -314,5 +398,202 @@ public class ProductImpl implements IProductDAO {
             e.printStackTrace();
         }
         return 0;
+    }
+
+    @Override
+    public List<String> getColorsByCategoryId(int categoryId) {
+        List<String> colors = new ArrayList<>();
+
+        // Nếu categoryId = 0 (tức là ấn Xem tất cả), lấy toàn bộ màu trong hệ thống
+        String sql = (categoryId > 0)
+                ? "SELECT DISTINCT product_color FROM Product WHERE category_id = ? AND isDeleted = FALSE AND product_color IS NOT NULL"
+                : "SELECT DISTINCT product_color FROM Product WHERE isDeleted = FALSE AND product_color IS NOT NULL";
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            // Chỉ truyền tham số nếu đang ở trong 1 danh mục cụ thể
+            if (categoryId > 0) {
+                ps.setInt(1, categoryId);
+            }
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                colors.add(rs.getString("product_color"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return colors;
+    }
+
+    @Override
+    public List<ProductObject> getProductsFiltered(int categoryId, String color, double minPrice, double maxPrice, String discountType) {
+        List<ProductObject> list = new ArrayList<>();
+
+        // 1. Dùng nguyên câu lệnh có LEFT JOIN của bạn, thêm bí danh "p." để tránh lỗi mập mờ cột (ambiguous column)
+        StringBuilder sql = new StringBuilder("SELECT p.*, c.category_name FROM Product p LEFT JOIN category c ON p.category_id = c.category_id WHERE p.isDeleted = FALSE");
+
+        // 2. Nối chuỗi điều kiện ĐỘNG (Nhớ thêm tiền tố p. vào các cột)
+        if (categoryId > 0) {
+            sql.append(" AND p.category_id = ?");
+        }
+
+        if (color != null && !color.isEmpty()) {
+            sql.append(" AND p.product_color = ?");
+        }
+
+        if (maxPrice > 0) {
+            // Lọc dựa trên giá thực tế
+            sql.append(" AND (p.product_price * (100 - p.discount_percent) / 100) BETWEEN ? AND ?");
+        }
+
+        if ("1".equals(discountType)) {
+            sql.append(" AND p.discount_percent > 0 AND p.discount_percent < 30");
+        } else if ("2".equals(discountType)) {
+            sql.append(" AND p.discount_percent >= 30 AND p.discount_percent <= 50");
+        } else if ("3".equals(discountType)) {
+            sql.append(" AND p.discount_percent > 50");
+        }else if ("all_sale".equals(discountType)) {
+            // Thêm dòng này để trang Sale mặc định lấy hết đồ đang giảm giá
+            sql.append(" AND p.discount_percent > 0");
+        }
+
+        sql.append(" ORDER BY p.id DESC");
+
+        // 3. Thực thi truy vấn
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            int paramIndex = 1;
+
+            if (categoryId > 0) {
+                ps.setInt(paramIndex++, categoryId);
+            }
+            if (color != null && !color.isEmpty()) {
+                ps.setString(paramIndex++, color);
+            }
+            if (maxPrice > 0) {
+                ps.setDouble(paramIndex++, minPrice);
+                ps.setDouble(paramIndex++, maxPrice);
+            }
+
+            // 4. Lấy dữ liệu đắp vào Object (Bê nguyên các trường của bạn sang)
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                ProductObject p = new ProductObject();
+                p.setProductId(rs.getInt("id"));
+                p.setProductCode(rs.getString("product_code"));
+                p.setProductName(rs.getString("product_name"));
+
+                // Các ảnh
+                p.setProductImage(rs.getString("product_image"));
+                p.setProductImage1(rs.getString("product_image1"));
+                p.setProductImage2(rs.getString("product_image2"));
+                p.setProductImage3(rs.getString("product_image3"));
+                p.setProductImage4(rs.getString("product_image4"));
+
+                // Giá, số lượng và CHIẾT KHẤU
+                p.setProductPrice(rs.getDouble("product_price"));
+                p.setDiscountPercent(rs.getInt("discount_percent")); // Phải có trường này để ngoài JSP còn tính giá Sale
+                p.setProductQuantity(rs.getInt("product_quantity"));
+
+                // Phân loại
+                p.setProductColor(rs.getString("product_color"));
+                p.setProductSize(rs.getString("product_size")); // Không có cái này JSP sẽ báo lỗi hoặc trống size
+                p.setProductDescription(rs.getString("product_description"));
+
+                // Danh mục
+                p.setCategoryId(rs.getInt("category_id"));
+                p.setCategoryName(rs.getString("category_name"));
+
+                // Meta data
+                p.setCreatedAt(rs.getDate("created_at"));
+                p.setUpdateAt(rs.getDate("updated_at"));
+                p.setDeleted(rs.getBoolean("isDeleted"));
+
+                list.add(p);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    @Override
+    public List<String> getColorsForSale() {
+        List<String> colors = new ArrayList<>();
+        // Câu lệnh SQL chỉ lấy màu từ những sản phẩm có discount_percent > 0
+        String sql = "SELECT DISTINCT product_color FROM Product WHERE discount_percent > 0 AND isDeleted = FALSE AND product_color IS NOT NULL";
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                colors.add(rs.getString("product_color"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return colors;
+    }
+
+    @Override
+    public List<ProductObject> searchProducts(String keyword) {
+        List<ProductObject> list = new ArrayList<>();
+        // SQL: LEFT JOIN với bảng category để lấy được category_name hiển thị ra giao diện nếu cần
+
+        String sql = "SELECT p.*, c.category_name FROM Product p "
+                + "LEFT JOIN category c ON p.category_id = c.category_id "
+                + "WHERE p.isDeleted = FALSE "
+                + "AND (p.product_code = ? OR p.product_name LIKE ? OR c.category_name LIKE ?) "
+                + "ORDER BY p.id DESC";
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            // Tham số 1: Khớp chính xác mã sản phẩm
+            ps.setString(1,  keyword);
+            // Tham số 2: Khớp một phần tên sản phẩm (chứa keyword)
+            ps.setString(2, "%" + keyword + "%");
+            ps.setString(3, "%" + keyword + "%");
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                ProductObject p = new ProductObject();
+                p.setProductId(rs.getInt("id"));
+                p.setProductCode(rs.getString("product_code"));
+                p.setProductName(rs.getString("product_name"));
+
+                // Lấy đúng các trường ảnh như hàm mẫu bạn gửi
+                p.setProductImage(rs.getString("product_image1"));
+                p.setProductImage1(rs.getString("product_image1"));
+                p.setProductImage2(rs.getString("product_image2"));
+                p.setProductImage3(rs.getString("product_image3"));
+                p.setProductImage4(rs.getString("product_image4"));
+
+                p.setProductPrice(rs.getDouble("product_price"));
+                p.setProductQuantity(rs.getInt("product_quantity"));
+                p.setProductColor(rs.getString("product_color"));
+                p.setProductSize(rs.getString("product_size"));
+                p.setProductDescription(rs.getString("product_description"));
+
+                // Các thông tin bổ sung
+                p.setCategoryId(rs.getInt("category_id"));
+                p.setCategoryName(rs.getString("category_name")); // Lấy từ kết quả JOIN
+                p.setDiscountPercent(rs.getInt("discount_percent")); // Cần thiết để tính giá Sale
+
+                p.setCreatedAt(rs.getDate("created_at"));
+                p.setUpdateAt(rs.getDate("updated_at"));
+                p.setDeleted(rs.getBoolean("isDeleted"));
+
+                list.add(p);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
     }
 }

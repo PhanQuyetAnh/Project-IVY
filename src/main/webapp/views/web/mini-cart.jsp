@@ -40,7 +40,16 @@
                     </div>
                     <p class="item-price">
                       <span class="total-price">
-                        <fmt:formatNumber value="${p.productPrice * item.quantity}" pattern="###,###"/>đ
+                        <c:choose>
+                          <%-- Nếu sản phẩm có giảm giá, tính giá đã giảm rồi mới nhân số lượng --%>
+                          <c:when test="${p.discountPercent > 0}">
+                            <fmt:formatNumber value="${(p.productPrice * (100 - p.discountPercent) / 100) * item.quantity}" pattern="###,###"/>đ
+                          </c:when>
+                          <%-- Nếu không giảm giá, tính theo giá gốc như bình thường --%>
+                          <c:otherwise>
+                            <fmt:formatNumber value="${p.productPrice * item.quantity}" pattern="###,###"/>đ
+                          </c:otherwise>
+                        </c:choose>
                       </span>
                     </p>
                   </div>

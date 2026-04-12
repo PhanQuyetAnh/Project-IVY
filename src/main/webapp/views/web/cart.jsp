@@ -47,7 +47,18 @@
                                             </div>
 
                                             <p class="item-price mb-0 fw-bold text-dark fs-5 me-4">
-                                                <fmt:formatNumber value="${p.productPrice * item.quantity}" pattern="###,###"/>đ
+                                                <span class="total-price">
+                                                    <c:choose>
+                                                      <%-- Nếu sản phẩm có giảm giá, tính giá đã giảm rồi mới nhân số lượng --%>
+                                                      <c:when test="${p.discountPercent > 0}">
+                                                        <fmt:formatNumber value="${(p.productPrice * (100 - p.discountPercent) / 100) * item.quantity}" pattern="###,###"/>đ
+                                                      </c:when>
+                                                      <%-- Nếu không giảm giá, tính theo giá gốc như bình thường --%>
+                                                      <c:otherwise>
+                                                        <fmt:formatNumber value="${p.productPrice * item.quantity}" pattern="###,###"/>đ
+                                                      </c:otherwise>
+                                                    </c:choose>
+                                                </span>
                                             </p>
 
                                             <button class="btn-remove-item cart-large-del border-0 bg-transparent text-secondary fs-5" data-product-id="${p.productId}" data-product-size="${item.productSize}">

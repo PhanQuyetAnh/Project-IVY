@@ -20,11 +20,12 @@ public class CartDAOImpl implements CartDAO {
 
 
 
-	@Override
+    @Override
     public List<CartObject> getCartItems(int userId) {
         List<CartObject> cartItems = new ArrayList<>();
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT p.id, p.product_name, p.product_image, p.product_price, p.product_color, ");
+        // ĐÃ THÊM: p.discount_percent vào câu SELECT
+        sql.append("SELECT p.id, p.product_name, p.product_image1, p.product_price, p.discount_percent, p.product_color, ");
         sql.append("c.quantity, c.product_size ");
         sql.append("FROM cart c JOIN Product p ON c.product_id = p.id WHERE c.user_id = ?");
 
@@ -34,13 +35,15 @@ public class CartDAOImpl implements CartDAO {
             stmt.setInt(1, userId);
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
-
                 ProductObject p = new ProductObject();
                 p.setProductId(rs.getInt("id"));
-	            p.setProductName(rs.getString("product_name"));
-	            p.setProductImage(rs.getString("product_image"));
-	            p.setProductPrice(rs.getDouble("product_price"));
-	            p.setProductColor(rs.getString("product_color"));
+                p.setProductName(rs.getString("product_name"));
+                p.setProductImage(rs.getString("product_image1"));
+                p.setProductPrice(rs.getDouble("product_price"));
+
+                // MỞ COMMENT VÀ CHẠY: Vì SQL đã có cột này nên sẽ không bị lỗi nữa
+                p.setDiscountPercent(rs.getInt("discount_percent"));
+                p.setProductColor(rs.getString("product_color"));
 
                 CartObject c = new CartObject();
                 c.setQuantity(rs.getInt("quantity"));
@@ -49,9 +52,8 @@ public class CartDAOImpl implements CartDAO {
 
                 cartItems.add(c);
             }
-
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.printStackTrace(); // Nếu giỏ hàng trống, hãy xem log ở đây để biết lỗi gì
         }
         return cartItems;
     }

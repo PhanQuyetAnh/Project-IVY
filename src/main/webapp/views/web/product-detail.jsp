@@ -1,6 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@page import="model.UserObject"%>
 <!DOCTYPE html>
 <html>
@@ -96,7 +97,27 @@
                             </div>
                         </div>
                         <div class="product-detail__price">
-                            <b>${product.productPrice}</b>
+                            <c:choose>
+                                <%-- TRƯỜNG HỢP CÓ GIẢM GIÁ --%>
+                                <c:when test="${product.discountPercent > 0}">
+                                    <b style="color: #dc3545; font-size: 24px;">
+                                        <fmt:formatNumber value="${product.productPrice - (product.productPrice * product.discountPercent / 100)}" pattern="###,###"/>đ
+                                    </b>
+                                    <span style="text-decoration: line-through; color: #999; font-size: 16px; margin-left: 10px; font-weight: normal;">
+                                        <fmt:formatNumber value="${product.productPrice}" pattern="###,###"/>đ
+                                    </span>
+                                    <span style="background: #dc3545; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 14px; margin-left: 10px; vertical-align: middle;">
+                                        -${product.discountPercent}%
+                                   </span>
+                                </c:when>
+
+                                <%-- TRƯỜNG HỢP GIÁ GỐC (KHÔNG GIẢM GIÁ) --%>
+                                <c:otherwise>
+                                    <b style="font-size: 24px;">
+                                        <fmt:formatNumber value="${product.productPrice}" pattern="###,###"/>đ
+                                    </b>
+                                </c:otherwise>
+                            </c:choose>
                         </div>
                         <div class="product-detail__color">
                             <p>Màu sắc:${product.productColor}</p>

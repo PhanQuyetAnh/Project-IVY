@@ -89,7 +89,7 @@
 								<div class="price-product">
 									<div class="inner-price">
 										<div class="inner-price-new">${product.productPrice}đ</div>
-										<div class="inner-price-old">${product.productPrice * 1.3}đ</div>
+<%--										<div class="inner-price-old">${product.productPrice}đ</div>--%>
 									</div>
 									<div class="inner-bag dropdown">
 										<a href="#" role="button" data-bs-toggle="dropdown"
@@ -133,7 +133,7 @@
 				SẢN PHẨM</h2>
 			<div class="swiper swiperSection2">
 				<div class="swiper-wrapper">
-					<c:forEach var="product" items="${bestSellers}">
+					<c:forEach var="product" items="${saleProducts}">
 						<div class="swiper-slide product-item">
 							<div class="inner-tag">Best Seller</div>
 							<div class="inner-discount">
@@ -195,7 +195,7 @@
 				</div>
 			</div>
 			<div class="inner-button">
-				<a href="all-product" class="button-outline">Xem tất cả</a>
+				<a href="${pageContext.request.contextPath}/public/sale" class="button-outline">Xem tất cả</a>
 			</div>
 		</div>
 	</div>

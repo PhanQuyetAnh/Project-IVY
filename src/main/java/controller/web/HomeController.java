@@ -35,18 +35,27 @@ public class HomeController extends HttpServlet {
         getServletContext().setAttribute("menuCategories", menuCategories);
     }
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        List<ProductObject> allProducts = productDAO.getAllProducts();
-        List<ProductObject> newArrivals = allProducts.size() > 10 ? allProducts.subList(0, 10) : allProducts;
-        List<ProductObject> bestSellers = allProducts.size() > 20 ? allProducts.subList(10, 20) : allProducts.subList(0, allProducts.size());
+        @Override
+        protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+            // 1. Lấy danh sách hàng Mới (NEW ARRIVAL)
+            List<ProductObject> allProducts = productDAO.getAllProducts();
+            List<ProductObject> newArrivals = allProducts.size() > 10 ? allProducts.subList(0, 10) : allProducts;
 
-        req.setAttribute("newArrivals", newArrivals);
-        req.setAttribute("bestSellers", bestSellers);
+            // 2. Lấy danh sách hàng GIẢM GIÁ (SALE)
+            List<ProductObject> saleProducts = productDAO.getDiscountedProducts();
 
-        RequestDispatcher rd = req.getRequestDispatcher("/views/web/home.jsp");
-        rd.forward(req, resp);
-    }
+            // Nếu hàng sale nhiều quá, chỉ cắt lấy 10 sản phẩm mới nhất để hiển thị cho trang chủ đỡ dài
+            if (saleProducts.size() > 10) {
+                saleProducts = saleProducts.subList(0, 10);
+            }
+
+            // 3. Đẩy dữ liệu ra ngoài file home.jsp
+            req.setAttribute("newArrivals", newArrivals);
+            req.setAttribute("saleProducts", saleProducts);
+
+            RequestDispatcher rd = req.getRequestDispatcher("/views/web/home.jsp");
+            rd.forward(req, resp);
+        }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {

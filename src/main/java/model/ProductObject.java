@@ -28,5 +28,6 @@ public class ProductObject {
 	private double averageRating; // Đánh giá trung bình
 	private int totalReviews; // Tổng số review
 	private List<ProductImageObject> productImages; // Danh sách ảnh sản phẩm
+	private int discountPercent;
 
 }
