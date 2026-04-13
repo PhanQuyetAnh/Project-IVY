@@ -13,7 +13,7 @@ if (tableSection6) {
             if (!confirmed) return;
 
             try {
-                const response = await fetch(`/jsp-servlet/admin-delete-order`, {
+                const response = await fetch(`/admin-delete-order`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',

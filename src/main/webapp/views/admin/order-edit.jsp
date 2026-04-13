@@ -1,27 +1,27 @@
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ page language="java" contentType="text/html; charset=UTF-8"
-	pageEncoding="UTF-8"%>
+         pageEncoding="UTF-8"%>
 <%@include file="/common/taglib.jsp"%>
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Trang chỉnh sửa đơn hàng | IVY moda</title>
+  <meta charset="UTF-8">
+  <title>Trang chỉnh sửa đơn hàng | IVY moda</title>
 </head>
 
 <body>
 <main id="main" class="main">
-    <section class="section dashboard">
-      <div class="row">
-        <div class="col-12">
-          <h1 class="box-title">Đơn hàng: DH#${order.orderId}</h1>
-          <c:if test="${param.status == 'success'}">
-            <div class="alert alert-success">Cập nhật đơn hàng thành công!</div>
-          </c:if>
-        </div>
-        <div class="col-12">
-          <div class="section-8">
-          <form action="/jsp-servlet/admin/admin-update-order" method="post" class="form-order-edit">
+  <section class="section dashboard">
+    <div class="row">
+      <div class="col-12">
+        <h1 class="box-title">Đơn hàng: DH#${order.orderId}</h1>
+        <c:if test="${param.status == 'success'}">
+          <div class="alert alert-success alert-dismissible fade show">Cập nhật đơn hàng thành công!</div>
+        </c:if>
+      </div>
+      <div class="col-12">
+        <div class="section-8">
+          <form action="${pageContext.request.contextPath}/admin/admin-update-order" method="post" class="form-order-edit">
             <input type="text" name="userId" value="${order.userObject.userId}" hidden class="inner-name"/>
             <input type="text" name="orderId" value="${order.orderId}" hidden class="inner-name"/>
 
@@ -36,29 +36,32 @@
               <div class="message message-phone"></div>
             </div>
             <div class="inner-group inner-two-col">
-              <label class="inner-label" for="note">Địa chỉ</label>
+              <label class="inner-label" for="address">Địa chỉ</label>
               <input type="text" id="address" name="address" value="${order.userObject.address}" class="inner-address"/>
             </div>
             <div class="inner-group">
               <label class="inner-label" for="paymentMethod">Phương thức thanh toán</label>
               <c:choose>
-                <c:when test="${order.paymentMethod == 'COD'}">
-                  <input type="text" id="paymentMethod" name="paymentMethod" value="Tiền mặt" readonly/>
+                <c:when test="${order.paymentMethod == 'COD' || order.paymentMethod == 'cod'}">
+                  <input type="text" id="paymentMethod" name="paymentMethod" value="Tiền mặt (COD)" readonly/>
                 </c:when>
-                <c:when test="${order.paymentMethod == 'credit_card'}">
-                  <input type="text" id="paymentMethod" name="paymentMethod" value="Thẻ tín dụng" readonly/>
+                <c:when test="${order.paymentMethod == 'VNPAY' || order.paymentMethod == 'vnpay'}">
+                  <input type="text" id="paymentMethod" name="paymentMethod" value="VNPAY / Thẻ ATM" readonly/>
                 </c:when>
-                <c:when test="${order.paymentMethod == 'BANK'}">
-                  <input type="text" id="paymentMethod" name="paymentMethod" value="Chuyển khoản" readonly/>
+                <c:when test="${order.paymentMethod == 'MOMO' || order.paymentMethod == 'momo'}">
+                  <input type="text" id="paymentMethod" name="paymentMethod" value="Ví MoMo" readonly/>
                 </c:when>
+                <c:otherwise>
+                  <input type="text" id="paymentMethod" name="paymentMethod" value="${order.paymentMethod}" readonly/>
+                </c:otherwise>
               </c:choose>
-
             </div>
             <div class="inner-group">
               <label class="inner-label" for="statusPay">Trạng thái thanh toán</label>
               <select name="paymentStatus" id="statusPay">
-                <option ${order.paymentStatus == 'paid' ? 'selected="selected"' : ''} value="paid">Đã thanh toán</option>
-                <option ${order.paymentStatus == 'unpaid' ? 'selected="selected"' : ''} value="unpaid">Chưa thanh toán</option>
+                <option ${order.paymentStatus == 'Đã thanh toán (VNPAY)' ? 'selected="selected"' : ''} value="Đã thanh toán (VNPAY)">Đã thanh toán (VNPAY)</option>
+                <option ${order.paymentStatus == 'Chưa thanh toán' ? 'selected="selected"' : ''} value="Chưa thanh toán">Chưa thanh toán</option>
+                <option ${order.paymentStatus == 'Chờ thanh toán online' ? 'selected="selected"' : ''} value="Chờ thanh toán online">Chờ thanh toán online</option>
               </select>
             </div>
             <div class="inner-group">
@@ -68,10 +71,10 @@
             <div class="inner-group">
               <label class="inner-label" for="status">Trạng thái</label>
               <select name="orderStatus" id="status">
-                <option ${order.orderStatus == 'pending' ? 'selected="selected"' : ''} value="pending">Khởi tạo</option>
-                <option ${order.orderStatus == 'shipping' ? 'selected="selected"' : ''} value="shipping">Đang giao</option>
-                <option ${order.orderStatus == 'success' ? 'selected="selected"' : ''} value="success">Thành công</option>
-                <option ${order.orderStatus == 'canceled' ? 'selected="selected"' : ''} value="canceled">Đã hủy</option>
+                <option ${order.orderStatus == 'Chờ xử lý' ? 'selected="selected"' : ''} value="Chờ xử lý">Chờ xử lý</option>
+                <option ${order.orderStatus == 'Đã xác nhận' ? 'selected="selected"' : ''} value="Đã xác nhận">Đã xác nhận</option>
+                <option ${order.orderStatus == 'Thành công' ? 'selected="selected"' : ''} value="Thành công">Thành công</option>
+                <option ${order.orderStatus == 'Đã hủy' ? 'selected="selected"' : ''} value="Đã hủy">Đã hủy</option>
               </select>
             </div>
             <div class="inner-group">
@@ -79,7 +82,7 @@
               <div class="inner-order-list">
                 <c:forEach var="orderItem" items="${order.orderDetailList}">
                   <div class="inner-order-item">
-                    <div class="inner-order-image"> <img src="/jsp-servlet/${orderItem.productObject.productImage}" /></div>
+                    <div class="inner-order-image"> <img src="<c:url value='${orderItem.productObject.productImage}'/>" /></div>
                     <div class="inner-order-content">
                       <div class="inner-order-name">${orderItem.productObject.productName}</div>
                       <div class="inner-order-text">Màu sắc: ${orderItem.productColor}</div>
@@ -99,18 +102,34 @@
                 <div>Tổng tiền:  <fmt:formatNumber value="${order.totalAmount}"
                                                    type="number" groupingUsed="true" />đ
                 </div>
+                <c:if test="${order.discountAmount > 0}">
+                  <div style="color: #e74c3c; margin-top: 5px;">
+                    Đã áp dụng Voucher giảm: -<fmt:formatNumber value="${order.discountAmount}" type="number" groupingUsed="true" />đ
+                  </div>
+                </c:if>
               </div>
             </div>
             <div class="inner-button inner-two-col">
               <button type="submit" class="btn-update">Cập nhật</button>
             </div>
           </form>
-          <div class="inner-back"> <a href="admin-order-list">Quay lại danh sách</a></div>
-        </div>
+          <div class="inner-back"> <a href="${pageContext.request.contextPath}/admin/admin-order-list">Quay lại danh sách</a></div>
         </div>
       </div>
-    </section>
-  </main>
+    </div>
+  </section>
+</main>
 
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    setTimeout(function() {
+      let alerts = document.querySelectorAll('.alert');
+      alerts.forEach(function(alert) {
+        alert.classList.remove('show');
+        setTimeout(() => alert.remove(), 200); // xóa element sau khi hiệu ứng fade out hoàn thành
+      });
+    }, 3000);
+  });
+</script>
 </body>
 </html>

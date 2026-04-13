@@ -183,7 +183,10 @@ public class RepairProduct extends HttpServlet {
                 boolean success = productDAO.updateProduct(product);
                 if (success) {
                     System.out.println("Product updated successfully");
-                    response.sendRedirect("admin-manage-product?success=update");
+                    // Nạp thông báo thành công vào Session để JSP hứng được
+                    request.getSession().setAttribute("message", "Cập nhật sản phẩm thành công!");
+                    response.sendRedirect(request.getContextPath() + "/admin/admin-manage-product");
+                    // ----------------------
                 } else {
                     throw new Exception("Không thể cập nhật sản phẩm.");
                 }

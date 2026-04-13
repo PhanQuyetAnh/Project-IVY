@@ -51,16 +51,16 @@ public class OrderDAOImpl implements OrderDAO {
 
     @Override
     public List<OrderObject> getAllOrders(int pageNo, int pageSize, String orderStatus,
-                                    String paymentStatus, String paymentMethod) {
+                                          String paymentStatus, String paymentMethod) {
         Map<Integer, OrderObject> orderMap = new LinkedHashMap<>();
 
         StringBuilder sql = new StringBuilder();
+        // ĐÃ SỬA: Lấy shipping_name, shipping_phone, shipping_address từ bảng Order
         sql.append("SELECT o.order_id, o.total_amount, o.order_status, o.payment_status, o.payment_method, o.order_date, ");
-        sql.append("u.user_id, u.user_fullname, u.user_phone_number, u.user_address, ");
+        sql.append("o.shipping_name, o.shipping_phone, o.shipping_address, ");
         sql.append("od.quantity_sold, od.price, od.product_id, od.product_size, od.product_color, ");
         sql.append("p.product_name, p.product_image ");
         sql.append("FROM `Order` o ");
-        sql.append("LEFT JOIN users u ON o.user_id = u.user_id ");
         sql.append("LEFT JOIN OrderDetail od ON od.order_id = o.order_id ");
         sql.append("LEFT JOIN Product p ON p.id = od.product_id ");
 
@@ -76,32 +76,26 @@ public class OrderDAOImpl implements OrderDAO {
             sql.append(" ");
         }
         sql.append("ORDER BY o.order_date DESC ");
-        // Phân trang
         sql.append("LIMIT ? OFFSET ?");
 
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql.toString())) {
 
             int index = 1;
-            // Gán giá trị cho các điều kiện lọc
             if (orderStatus != null && !orderStatus.isEmpty()) ps.setString(index++, orderStatus);
             if (paymentStatus != null && !paymentStatus.isEmpty()) ps.setString(index++, paymentStatus);
             if (paymentMethod != null && !paymentMethod.isEmpty()) ps.setString(index++, paymentMethod);
 
-            // Gán LIMIT và OFFSET
             int offset = (pageNo - 1) * pageSize;
             ps.setInt(index++, pageSize);
             ps.setInt(index, offset);
 
-            // Thực thi truy vấn và lấy kết quả
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-
                     int orderId = rs.getInt("order_id");
                     OrderObject order = orderMap.get(orderId);
                     if (order == null) {
                         order = new OrderObject();
-
                         order.setOrderId(rs.getInt("order_id"));
                         order.setOrderDate(rs.getTimestamp("order_date"));
                         order.setTotalAmount(rs.getFloat("total_amount"));
@@ -109,38 +103,37 @@ public class OrderDAOImpl implements OrderDAO {
                         order.setPaymentStatus(rs.getString("payment_status"));
                         order.setPaymentMethod(rs.getString("payment_method"));
 
+                        // ĐÃ SỬA: Map thông tin Shipping vào UserObject để JSP của bạn dùng được luôn không cần sửa code HTML
                         UserObject user = new UserObject();
-                        user.setUserId(rs.getInt("user_id"));
-                        user.setFullname(rs.getString("user_fullname"));
-                        user.setPhoneNumber(rs.getString("user_phone_number"));
-                        user.setAddress(rs.getString("user_address"));
+                        user.setFullname(rs.getString("shipping_name"));
+                        user.setPhoneNumber(rs.getString("shipping_phone"));
+                        user.setAddress(rs.getString("shipping_address"));
                         order.setUserObject(user);
 
                         order.setOrderDetailList(new ArrayList<>());
                         orderMap.put(orderId, order);
                     }
 
-                    ProductObject productObject = new ProductObject();
-                    productObject.setProductId(rs.getInt("product_id"));
-                    productObject.setProductName(rs.getString("product_name"));
-                    productObject.setProductImage(rs.getString("product_image"));
+                    if (rs.getInt("product_id") > 0) {
+                        ProductObject productObject = new ProductObject();
+                        productObject.setProductId(rs.getInt("product_id"));
+                        productObject.setProductName(rs.getString("product_name"));
+                        productObject.setProductImage(rs.getString("product_image"));
 
-                    OrderDetailObject orderDetailObject = new OrderDetailObject();
-                    orderDetailObject.setPrice(rs.getFloat("price"));
-                    orderDetailObject.setQuantitySold(rs.getInt("quantity_sold"));
-                    orderDetailObject.setProductSize(rs.getString("product_size"));
-                    orderDetailObject.setProductColor(rs.getString("product_color"));
+                        OrderDetailObject orderDetailObject = new OrderDetailObject();
+                        orderDetailObject.setPrice(rs.getFloat("price"));
+                        orderDetailObject.setQuantitySold(rs.getInt("quantity_sold"));
+                        orderDetailObject.setProductSize(rs.getString("product_size"));
+                        orderDetailObject.setProductColor(rs.getString("product_color"));
+                        orderDetailObject.setProductObject(productObject);
 
-                    orderDetailObject.setProductObject(productObject); //set sp vào chi tiêt đơn hàng
-
-                    order.getOrderDetailList().add(orderDetailObject); //thêm chi tiết đơn hàng vào hóa đơn
+                        order.getOrderDetailList().add(orderDetailObject);
+                    }
                 }
             }
-
         } catch (SQLException e) {
-            e.printStackTrace(); // Có thể log lỗi hoặc ném lại exception tuỳ trường hợp
+            e.printStackTrace();
         }
-
         return new ArrayList<>(orderMap.values());
     }
 
@@ -239,13 +232,15 @@ public class OrderDAOImpl implements OrderDAO {
     public OrderObject getOrderDetailByOrderId(int orderId) {
         OrderObject order = new OrderObject();
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT o.*, u.user_fullname, u.user_phone_number, u.user_address, ");
+
+        // ĐÃ SỬA: Thêm JOIN với bảng voucher để lấy voucher_code
+        sql.append("SELECT o.*, v.voucher_code, ");
         sql.append("od.quantity_sold, od.price, od.product_id, od.product_size, od.product_color, ");
         sql.append("p.product_name, p.product_image ");
         sql.append("FROM `Order` o ");
-        sql.append("LEFT JOIN users u ON o.user_id = u.user_id ");
         sql.append("LEFT JOIN OrderDetail od ON od.order_id = o.order_id ");
         sql.append("LEFT JOIN Product p ON p.id = od.product_id ");
+        sql.append("LEFT JOIN voucher v ON o.voucher_id = v.voucher_id "); // Join bảng Voucher
         sql.append("WHERE o.order_id = ?");
 
         try(Connection conn = DBUtil.getConnection();
@@ -261,26 +256,42 @@ public class OrderDAOImpl implements OrderDAO {
                         order.setPaymentStatus(rs.getString("payment_status"));
                         order.setPaymentMethod(rs.getString("payment_method"));
                         order.setOrderNote(rs.getString("order_note"));
+
                         order.setShippingName(rs.getString("shipping_name"));
                         order.setShippingPhone(rs.getString("shipping_phone"));
                         order.setShippingAddress(rs.getString("shipping_address"));
-                        order.setDiscountAmount(rs.getDouble("discount_amount"));
 
+                        // Thông tin Voucher
+                        order.setDiscountAmount(rs.getDouble("discount_amount"));
+                        order.setVoucherId(rs.getInt("voucher_id"));
+
+                        // MẸO: Lưu tạm mã Voucher (IVY150K) vào một trường nào đó của Order (vd: lưu vào PromoCode nếu có)
+                        // Nếu OrderObject chưa có biến "voucherCode", bạn có thể tạo thêm trong Model.
+
+                        // ĐÃ SỬA: Đẩy thông tin Shipping vào UserObject để in ra JSP
                         UserObject user = new UserObject();
-                        user.setFullname(rs.getString("user_fullname"));
+                        user.setFullname(rs.getString("shipping_name"));
+                        user.setPhoneNumber(rs.getString("shipping_phone"));
+                        user.setAddress(rs.getString("shipping_address"));
                         order.setUserObject(user);
+
                         order.setOrderDetailList(new ArrayList<>());
                     }
-                    OrderDetailObject detail = new OrderDetailObject();
-                    detail.setPrice(rs.getDouble("price"));
-                    detail.setQuantitySold(rs.getInt("quantity_sold"));
-                    detail.setProductSize(rs.getString("product_size"));
-                    detail.setProductColor(rs.getString("product_color"));
-                    ProductObject p = new ProductObject();
-                    p.setProductName(rs.getString("product_name"));
-                    p.setProductImage(rs.getString("product_image"));
-                    detail.setProductObject(p);
-                    order.getOrderDetailList().add(detail);
+
+                    if (rs.getInt("product_id") > 0) {
+                        OrderDetailObject detail = new OrderDetailObject();
+                        detail.setPrice(rs.getDouble("price"));
+                        detail.setQuantitySold(rs.getInt("quantity_sold"));
+                        detail.setProductSize(rs.getString("product_size"));
+                        detail.setProductColor(rs.getString("product_color"));
+
+                        ProductObject p = new ProductObject();
+                        p.setProductName(rs.getString("product_name"));
+                        p.setProductImage(rs.getString("product_image"));
+                        detail.setProductObject(p);
+
+                        order.getOrderDetailList().add(detail);
+                    }
                 }
             }
         } catch (SQLException e){ e.printStackTrace(); }
@@ -331,13 +342,14 @@ public class OrderDAOImpl implements OrderDAO {
 
     @Override
     public boolean updateOrder(int orderId, int userId, String orderStatus, String paymentStatus) {
-        String sql = "UPDATE `Order` SET order_status = ?, payment_status = ? WHERE order_id = ? AND user_id = ?";
+        // ĐÃ SỬA: Xóa AND user_id = ? vì order_id đã là khóa chính duy nhất rồi
+        String sql = "UPDATE `Order` SET order_status = ?, payment_status = ? WHERE order_id = ?";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, orderStatus);
             ps.setString(2, paymentStatus);
             ps.setInt(3, orderId);
-            ps.setInt(4, userId);
+            // ps.setInt(4, userId); // Bỏ dòng này đi
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();

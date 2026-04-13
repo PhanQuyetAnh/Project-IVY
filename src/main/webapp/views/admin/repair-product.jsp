@@ -104,5 +104,21 @@
         </div>
     </div>
 </main>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Cài đặt thời gian tự tắt: 3000 = 3 giây
+        setTimeout(function() {
+            let alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                // Xóa class 'show' để kích hoạt hiệu ứng mờ dần (fade) của Bootstrap
+                alert.classList.remove('show');
+
+                // Đợi hiệu ứng mờ xong (khoảng 200ms) thì xóa hẳn thẻ khỏi giao diện
+                setTimeout(() => alert.remove(), 200);
+            });
+        }, 3000);
+    });
+</script>
 </body>
+
 </html>

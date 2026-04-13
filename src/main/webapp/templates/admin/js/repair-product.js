@@ -2,12 +2,14 @@ document.getElementById("editProductForm").addEventListener("submit", function (
     e.preventDefault(); // Ngăn submit mặc định
     console.log("Form submit triggered at", new Date().toISOString());
 
-    // Lấy giá trị
+    // ĐÃ SỬA: Đồng bộ tên key 'categoryId' cho chuẩn với HTML
     const fields = {
         productName: document.getElementById("productName")?.value.trim() || "",
         productCode: document.getElementById("productCode")?.value.trim() || "",
         productPrice: document.getElementById("productPrice")?.value || "",
-        productCategory: document.getElementById("productCategory")?.value || "",
+
+        categoryId: document.getElementById("categoryId")?.value || "", // Thay productCategory thành categoryId
+
         productColor: document.getElementById("productColor")?.value.trim() || "",
         productSize: document.getElementById("productSize")?.value.trim() || "",
         productQuantity: document.getElementById("productQuantity")?.value || "",
@@ -50,8 +52,9 @@ document.getElementById("editProductForm").addEventListener("submit", function (
         isValid = false;
     }
 
-    if (!fields.productCategory) {
-        showError("productCategory", "Vui lòng chọn danh mục");
+    // ĐÃ SỬA: Dùng fields.categoryId và chặn luôn giá trị "0"
+    if (!fields.categoryId || fields.categoryId === "0") {
+        showError("categoryId", "Vui lòng chọn danh mục");
         isValid = false;
     }
 
@@ -75,32 +78,22 @@ document.getElementById("editProductForm").addEventListener("submit", function (
         isValid = false;
     }
 
-    // Kiểm tra ảnh mới (tùy chọn: bắt buộc hoặc không)
-    // Nếu muốn bắt buộc chọn ảnh mới, bỏ comment đoạn sau:
-    /*
-    if (fields.productImage.length === 0) {
-        showError("productImage", "Vui lòng chọn ảnh sản phẩm mới");
-        isValid = false;
-    } else {
-    */
-        if (fields.productImage.length > 0) {
-            const file = fields.productImage[0];
-            const validImageTypes = ['image/jpeg', 'image/png', 'image/gif'];
-            console.log("Image file details:", { name: file.name, type: file.type, size: file.size });
-            if (!validImageTypes.includes(file.type)) {
-                showError("productImage", "Vui lòng chọn tệp ảnh (JPEG, PNG, GIF)");
-                isValid = false;
-            } else if (file.size > 5 * 1024 * 1024) { // Giới hạn 5MB
-                showError("productImage", "Kích thước ảnh không được vượt quá 5MB");
-                isValid = false;
-            }
+    if (fields.productImage.length > 0) {
+        const file = fields.productImage[0];
+        const validImageTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!validImageTypes.includes(file.type)) {
+            showError("productImage", "Vui lòng chọn tệp ảnh (JPEG, PNG, GIF)");
+            isValid = false;
+        } else if (file.size > 5 * 1024 * 1024) {
+            showError("productImage", "Kích thước ảnh không được vượt quá 5MB");
+            isValid = false;
         }
-    // }
+    }
 
     // Nếu hợp lệ thì gửi form
     if (isValid) {
         console.log("Form is valid, submitting to", this.action);
-        this.submit(); // Gửi form
+        this.submit();
     } else {
         console.error("Form validation failed. Errors:", document.querySelectorAll(".text-danger:not(:empty)").length);
     }

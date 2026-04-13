@@ -58,8 +58,9 @@
                                         <div class="col-md-5 d-flex align-items-center">
                                             <select id="categoryFilter" class="form-select me-2" style="max-width: 150px;">
                                                 <option value="">Danh mục</option>
-                                                <option value="NEW ARRIVAL">NEW ARRIVAL</option>
-                                                <option value="Quần dài">Quần dài</option>
+                                                <c:forEach var="cat" items="${categories}">
+                                                    <option value="${cat.categoryName}">${cat.categoryName}</option>
+                                                </c:forEach>
                                             </select>
                                             <input type="date" id="dateFilter" class="form-control" style="max-width: 200px;" />
                                         </div>
@@ -83,7 +84,7 @@
                                                         </h5>
                                                         <p class="card-text">Mã: ${product.productCode}</p>
                                                         <p class="card-text">Giá: ${product.productPrice}đ</p>
-                                                        <p class="card-text">Danh mục: ${product.productCategory}</p>
+                                                        <p class="card-text">Danh mục: ${product.categoryName}</p>
                                                         <p class="card-text">Ngày tạo: ${product.createdAt}</p>
                                                         <div class="d-flex justify-content-between">
                                                             <a href="<c:url value='/admin-edit-product?id=${product.productId}'/>" class="btn btn-warning btn-sm">Sửa</a>
@@ -109,7 +110,7 @@
                                                         <h5 class="card-title">${product.productName}</h5>
                                                         <p class="card-text">Mã: ${product.productCode}</p>
                                                         <p class="card-text">Giá: ${product.productPrice}đ</p>
-                                                        <p class="card-text">Danh mục: ${product.productCategory}</p>
+                                                        <p class="card-text">Danh mục: ${product.categoryName}</p>
                                                         <p class="card-text">Ngày tạo: ${product.createdAt}</p>
                                                         <div class="d-flex justify-content-between">
                                                             <a href="<c:url value='/admin/admin-restore-product?id=${product.productId}'/>" class="btn btn-success btn-sm" onclick="return confirm('Bạn có chắc muốn khôi phục sản phẩm này?')">Khôi phục</a>
@@ -138,7 +139,7 @@
                     name: "${product.productName}",
                     image: "<c:url value='${product.productImage}'/>",
                     price: "${product.productPrice}đ",
-                    category: "${product.productCategory}",
+                    category: "${product.categoryName}",
                     createdDate: "${product.createdAt}"
                 }<c:if test="${!status.last}">,</c:if>
             </c:forEach>
@@ -152,7 +153,7 @@
                     name: "${product.productName}",
                     image: "<c:url value='${product.productImage}'/>",
                     price: "${product.productPrice}đ",
-                    category: "${product.productCategory}",
+                    category: "${product.categoryName}",
                     createdDate: "${product.createdAt}"
                 }<c:if test="${!status.last}">,</c:if>
             </c:forEach>

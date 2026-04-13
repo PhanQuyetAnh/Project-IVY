@@ -1,12 +1,14 @@
 document.getElementById("addProductForm").addEventListener("submit", function (e) {
     e.preventDefault(); // Ngăn submit mặc định
 
-    // Lấy giá trị
+    // ĐÃ SỬA: Lấy đúng ID 'categoryId' của thẻ select
     const fields = {
         productName: document.getElementById("productName").value.trim(),
         productCode: document.getElementById("productCode").value.trim(),
         productPrice: document.getElementById("productPrice").value,
-        productCategory: document.getElementById("productCategory").value,
+
+        categoryId: document.getElementById("categoryId").value, // Sửa ở đây
+
         productColor: document.getElementById("productColor").value.trim(),
         productSize: document.getElementById("productSize").value.trim(),
         productQuantity: document.getElementById("productQuantity").value,
@@ -41,8 +43,9 @@ document.getElementById("addProductForm").addEventListener("submit", function (e
         isValid = false;
     }
 
-    if (!fields.productCategory || fields.productCategory === "Chọn danh mục") {
-        showError("productCategory", "Vui lòng chọn danh mục");
+    // ĐÃ SỬA: Check fields.categoryId và giá trị "0"
+    if (!fields.categoryId || fields.categoryId === "0") {
+        showError("categoryId", "Vui lòng chọn danh mục");
         isValid = false;
     }
 
@@ -83,5 +86,3 @@ document.getElementById("addProductForm").addEventListener("submit", function (e
         }
     }
 });
-
-

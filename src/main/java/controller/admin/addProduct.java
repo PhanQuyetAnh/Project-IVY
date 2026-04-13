@@ -185,7 +185,8 @@ public class addProduct extends HttpServlet {
                 // Lưu sản phẩm vào database
                 boolean success = productDAO.insertProduct(product);
                 if (success) {
-                    response.sendRedirect("admin-manage-product?success=add");
+                    request.getSession().setAttribute("message", "Thêm sản phẩm mới thành công!");
+                    response.sendRedirect(request.getContextPath() + "/admin/admin-manage-product");
                 } else {
                     throw new Exception("Không thể thêm sản phẩm.");
                 }

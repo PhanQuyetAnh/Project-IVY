@@ -38,7 +38,11 @@ public class ProductImpl implements IProductDAO {
     @Override
     public List<ProductObject> getAllProducts() {
         List<ProductObject> list = new ArrayList<>();
-        String sql = "SELECT * FROM Product WHERE isDeleted = FALSE";
+        // SỬA TẠI ĐÂY: Thêm LEFT JOIN
+        String sql = "SELECT p.*, c.category_name FROM Product p "
+                + "LEFT JOIN category c ON p.category_id = c.category_id "
+                + "WHERE p.isDeleted = FALSE "
+                + "ORDER BY p.id DESC";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ResultSet rs = ps.executeQuery();
@@ -47,7 +51,7 @@ public class ProductImpl implements IProductDAO {
                 p.setProductId(rs.getInt("id"));
                 p.setProductCode(rs.getString("product_code"));
                 p.setProductName(rs.getString("product_name"));
-                p.setProductImage(rs.getString("product_image1")); // Ảnh chính
+                p.setProductImage(rs.getString("product_image")); // Ảnh chính
                 p.setProductImage1(rs.getString("product_image1"));
                 p.setProductImage2(rs.getString("product_image2"));
                 p.setProductImage3(rs.getString("product_image3"));
@@ -58,6 +62,8 @@ public class ProductImpl implements IProductDAO {
                 p.setProductSize(rs.getString("product_size"));
                 p.setProductDescription(rs.getString("product_description"));
                 p.setCategoryId(rs.getInt("category_id"));
+                p.setCategoryName(rs.getString("category_name"));
+                p.setDiscountPercent(rs.getInt("discount_percent"));
                 p.setCreatedAt(rs.getDate("created_at"));
                 p.setUpdateAt(rs.getDate("updated_at"));
                 p.setDeleted(rs.getBoolean("isDeleted"));
@@ -86,7 +92,7 @@ public class ProductImpl implements IProductDAO {
                 p.setProductId(rs.getInt("id"));
                 p.setProductCode(rs.getString("product_code"));
                 p.setProductName(rs.getString("product_name"));
-                p.setProductImage(rs.getString("product_image1"));
+                p.setProductImage(rs.getString("product_image"));
                 p.setProductImage1(rs.getString("product_image1"));
                 p.setProductImage2(rs.getString("product_image2"));
                 p.setProductImage3(rs.getString("product_image3"));
@@ -96,7 +102,7 @@ public class ProductImpl implements IProductDAO {
                 p.setProductColor(rs.getString("product_color"));
                 p.setProductSize(rs.getString("product_size"));
                 p.setProductDescription(rs.getString("product_description"));
-
+                p.setDiscountPercent(rs.getInt("discount_percent"));
                 p.setCategoryId(rs.getInt("category_id"));
                 p.setCategoryName(rs.getString("category_name"));
 
@@ -306,7 +312,11 @@ public class ProductImpl implements IProductDAO {
 
     public List<ProductObject> getDeletedProducts() {
         List<ProductObject> list = new ArrayList<>();
-        String sql = "SELECT * FROM Product WHERE isDeleted = TRUE";
+        // SỬA TẠI ĐÂY: Thêm LEFT JOIN
+        String sql = "SELECT p.*, c.category_name FROM Product p "
+                + "LEFT JOIN category c ON p.category_id = c.category_id "
+                + "WHERE p.isDeleted = TRUE "
+                + "ORDER BY p.id DESC";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ResultSet rs = ps.executeQuery();
@@ -315,7 +325,7 @@ public class ProductImpl implements IProductDAO {
                 p.setProductId(rs.getInt("id"));
                 p.setProductCode(rs.getString("product_code"));
                 p.setProductName(rs.getString("product_name"));
-                p.setProductImage(rs.getString("product_image1"));
+                p.setProductImage(rs.getString("product_image"));
                 p.setProductImage1(rs.getString("product_image1"));
                 p.setProductImage2(rs.getString("product_image2"));
                 p.setProductImage3(rs.getString("product_image3"));
@@ -326,6 +336,7 @@ public class ProductImpl implements IProductDAO {
                 p.setProductSize(rs.getString("product_size"));
                 p.setProductDescription(rs.getString("product_description"));
                 p.setCategoryId(rs.getInt("category_id"));
+                p.setCategoryName(rs.getString("category_name"));
                 p.setCreatedAt(rs.getDate("created_at"));
                 p.setUpdateAt(rs.getDate("updated_at"));
                 p.setDeleted(rs.getBoolean("isDeleted"));
