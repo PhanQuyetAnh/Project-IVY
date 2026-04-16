@@ -42,7 +42,7 @@ public class ProductImpl implements IProductDAO {
         String sql = "SELECT p.*, c.category_name FROM Product p "
                 + "LEFT JOIN category c ON p.category_id = c.category_id "
                 + "WHERE p.isDeleted = FALSE "
-                + "ORDER BY p.id DESC";
+                + "ORDER BY p.id ASC";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ResultSet rs = ps.executeQuery();
@@ -79,7 +79,7 @@ public class ProductImpl implements IProductDAO {
     public List<ProductObject> getProductsByCategoryId(int categoryId) {
         List<ProductObject> list = new ArrayList<>();
         // Câu lệnh SQL lọc theo category_id
-        String sql = "SELECT p.*, c.category_name FROM Product p LEFT JOIN category c ON p.category_id = c.category_id WHERE p.category_id = ? AND p.isDeleted = FALSE ORDER BY p.id DESC";
+        String sql = "SELECT p.*, c.category_name FROM Product p LEFT JOIN category c ON p.category_id = c.category_id WHERE p.category_id = ? AND p.isDeleted = FALSE ORDER BY p.id ASC";
 
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

@@ -16,10 +16,13 @@ public class TopSellingImpl implements ITopSelling {
     public List<TopSellingProduct> getTopSellingProducts(int limit, int offset) {
         List<TopSellingProduct> productList = new ArrayList<>();
         String sql = "SELECT p.id, p.product_name, p.product_image, AVG(od.price) as avg_price, " +
-                     "SUM(od.quantity_sold) as total_sold, SUM(od.quantity_sold * od.price) as revenue " +
-                     "FROM Product p LEFT JOIN OrderDetail od ON p.id = od.product_id " +
-                     "GROUP BY p.id, p.product_name, p.product_image " +
-                     "ORDER BY total_sold DESC LIMIT ? OFFSET ?";
+                "SUM(od.quantity_sold) as total_sold, SUM(od.quantity_sold * od.price) as revenue " +
+                "FROM Product p " +
+                "JOIN OrderDetail od ON p.id = od.product_id " +
+                "JOIN `Order` o ON od.order_id = o.order_id " +
+                "WHERE o.order_status IN ('Thành công', 'Đã xác nhận') " +
+                "GROUP BY p.id, p.product_name, p.product_image " +
+                "ORDER BY total_sold DESC LIMIT ? OFFSET ?";
 
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -62,11 +65,13 @@ public class TopSellingImpl implements ITopSelling {
     public List<TopSellingProduct> searchTopSellingProducts(String keyword, int limit, int offset) {
         List<TopSellingProduct> productList = new ArrayList<>();
         String sql = "SELECT p.id, p.product_name, p.product_image, AVG(od.price) as avg_price, " +
-                     "SUM(od.quantity_sold) as total_sold, SUM(od.quantity_sold * od.price) as revenue " +
-                     "FROM Product p LEFT JOIN OrderDetail od ON p.id = od.product_id " +
-                     "WHERE p.product_name LIKE ? " +
-                     "GROUP BY p.id, p.product_name, p.product_image " +
-                     "ORDER BY total_sold DESC LIMIT ? OFFSET ?";
+                "SUM(od.quantity_sold) as total_sold, SUM(od.quantity_sold * od.price) as revenue " +
+                "FROM Product p " +
+                "JOIN OrderDetail od ON p.id = od.product_id " +
+                "JOIN `Order` o ON od.order_id = o.order_id " +
+                "WHERE o.order_status IN ('Thành công', 'Đã xác nhận') " +
+                "GROUP BY p.id, p.product_name, p.product_image " +
+                "ORDER BY total_sold DESC LIMIT ? OFFSET ?";
 
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {

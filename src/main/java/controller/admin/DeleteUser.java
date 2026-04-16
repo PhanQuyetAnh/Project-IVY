@@ -2,7 +2,6 @@ package controller.admin;
 
 import dao.Impl.UserDAOImpl;
 import dao.UserDAO;
-import model.UserObject;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -20,20 +19,37 @@ public class DeleteUser extends HttpServlet {
         userDAO = new UserDAOImpl();
     }
 
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    // ĐÃ SỬA: Đổi từ doGet sang doPost để bảo mật và khớp với Javascript fetch
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+
         String userIdParam = request.getParameter("userId");
+
         if (userIdParam != null && !userIdParam.trim().isEmpty()) {
             try {
                 int userId = Integer.parseInt(userIdParam);
                 boolean success = userDAO.deactivateUser(userId);
-                response.getWriter().write("{\"status\": \"" + (success ? "success" : "fail") + "\"}");
+
+                if (success) {
+                    // Cập nhật DB thành công
+                    response.setStatus(HttpServletResponse.SC_OK); // Trả về mã 200 (response.ok = true)
+                    response.getWriter().write("{\"status\": \"success\"}");
+                } else {
+                    // Gọi DB thất bại
+                    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // Lỗi 500
+                    response.getWriter().write("{\"status\": \"fail\"}");
+                }
             } catch (NumberFormatException e) {
+                // Sai định dạng ID
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // Lỗi 400
                 response.getWriter().write("{\"status\": \"fail\"}");
             }
         } else {
+            // Thiếu tham số ID
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // Lỗi 400
             response.getWriter().write("{\"status\": \"fail\"}");
         }
     }

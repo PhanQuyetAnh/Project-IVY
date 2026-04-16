@@ -19,7 +19,7 @@ public class UserObject {
 	private String email;
 	private Date createDate;
 	private Date modifiedDate;
-	private boolean active;
+	private int active;
 	private String address;
 	private int loginCount;
 	private RoleObject role;

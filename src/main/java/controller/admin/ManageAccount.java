@@ -2,7 +2,6 @@ package controller.admin;
 
 import dao.Impl.UserDAOImpl;
 import dao.UserDAO;
-
 import model.UserObject;
 
 import java.io.IOException;
@@ -15,9 +14,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-/**
- * Servlet implementation class ManageAccount
- */
 @WebServlet("/admin/admin-manage-account")
 public class ManageAccount extends HttpServlet {
 	private static final long serialVersionUID = 1L;
@@ -28,9 +24,15 @@ public class ManageAccount extends HttpServlet {
 	}
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// Bắt buộc có dòng này để tìm kiếm tiếng Việt không bị lỗi font
+		request.setCharacterEncoding("UTF-8");
 
-		//Lấy danh sách sản phẩm từ database
-		List<UserObject> users = userDAO.getAllUsers();
+		// Hứng từ khóa tìm kiếm và cách sắp xếp từ giao diện
+		String keyword = request.getParameter("keyword");
+		String sortBy = request.getParameter("sortBy");
+
+		// Gọi hàm đã nâng cấp
+		List<UserObject> users = userDAO.getAllUsers(keyword, sortBy);
 
 		// Gửi dữ liệu sang JSP
 		request.setAttribute("users", users);
@@ -40,8 +42,6 @@ public class ManageAccount extends HttpServlet {
 	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
 		doGet(request, response);
 	}
-
 }

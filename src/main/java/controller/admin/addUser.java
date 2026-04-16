@@ -64,7 +64,7 @@ public class addUser extends HttpServlet {
             user.setAddress(address);
             user.setCreateDate(createDate);
             user.setModifiedDate(null);
-            user.setActive(true);
+            user.setActive(1);
             user.setLoginCount(0);
 
             RoleObject role = new RoleObject();

@@ -18,19 +18,33 @@ public class UserDAOImpl implements UserDAO {
 			try {
 				int results = pre.executeUpdate();
 				System.out.println("Số dòng ảnh hưởng: " + results); // Debug
+
+				// Lệnh này chỉ chạy được nếu trước đó đã gọi conn.setAutoCommit(false)
 				conn.commit();
 				return results > 0;
+
 			} catch (SQLException e) {
 				System.err.println("Lỗi SQL: " + e.getMessage()); // Debug
 				e.printStackTrace();
 				try {
-					conn.rollback();
-					System.err.println("Đã rollback giao dịch");
+					if (conn != null) {
+						conn.rollback();
+						System.err.println("Đã rollback giao dịch");
+					}
 				} catch (SQLException ex) {
 					System.err.println("Lỗi rollback: " + ex.getMessage());
 					ex.printStackTrace();
 				}
 				return false;
+			} finally {
+				// THÊM CHỐT AN TOÀN: Luôn trả lại trạng thái auto-commit=true để tránh lỗi cho các hàm khác dùng chung DB
+				try {
+					if (conn != null) {
+						conn.setAutoCommit(true);
+					}
+				} catch (SQLException ex) {
+					ex.printStackTrace();
+				}
 			}
 		}
 		return false;
@@ -38,24 +52,50 @@ public class UserDAOImpl implements UserDAO {
 
 	@Override
 	public UserObject getUserByUsernamePassword(String username, String password) {
-	    String sql = "SELECT u.*, r.role_name " +
-	                 "FROM users u " +
-	                 "INNER JOIN roles r ON u.role_id = r.role_id " +
-	                 "WHERE user_email = ? AND password = ?";
-	    try (Connection conn = DBUtil.getConnection();
-	         PreparedStatement ps = conn.prepareStatement(sql)) {
-	        ps.setString(1, username);
-	        ps.setString(2, password);
-	        try (ResultSet rs = ps.executeQuery()) {
-	            if (rs.next()) {
-	                return mapRowToUser(rs);
-	            }
-	        }
-	    } catch (SQLException e) {
-	        e.printStackTrace();
-	    }
-	    return null;
+		// Chỉ cho phép người dùng có user_isactive = 1 (Hoạt động) đăng nhập
+		String sql = "SELECT u.*, r.role_name " +
+				"FROM users u " +
+				"INNER JOIN roles r ON u.role_id = r.role_id " +
+				"WHERE user_email = ? AND password = ?";
+
+		try (Connection conn = DBUtil.getConnection();
+			 PreparedStatement ps = conn.prepareStatement(sql)) {
+
+			ps.setString(1, username);
+			ps.setString(2, password);
+
+			try (ResultSet rs = ps.executeQuery()) {
+				if (rs.next()) {
+					// 1. Đọc thông tin User từ DB
+					UserObject user = mapRowToUser(rs);
+
+					// 2. TĂNG SỐ LẦN ĐĂNG NHẬP (+1) VÀO DATABASE
+					updateLoginCount(user.getUserId());
+
+					// 3. Cập nhật luôn biến loginCount trên RAM để mang đi hiển thị ngay mà không cần truy vấn lại
+					user.setLoginCount(user.getLoginCount() + 1);
+
+					return user;
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
+
+	private void updateLoginCount(int userId) {
+		String updateSql = "UPDATE users SET login_count = login_count + 1 WHERE user_id = ?";
+		try (Connection conn = DBUtil.getConnection();
+			 PreparedStatement ps = conn.prepareStatement(updateSql)) {
+			// Lưu ý: Không cần setAutoCommit(false) ở đây vì chỉ chạy 1 lệnh Update đơn giản
+			ps.setInt(1, userId);
+			ps.executeUpdate();
+		} catch (SQLException e) {
+			System.err.println("Lỗi khi tăng login_count: " + e.getMessage());
+		}
+	}
+
 
 	private UserObject mapRowToUser(ResultSet rs) throws SQLException {
 		UserObject user = new UserObject();
@@ -67,8 +107,9 @@ public class UserDAOImpl implements UserDAO {
 		user.setEmail(rs.getString("user_email"));
 		user.setCreateDate(rs.getTimestamp("user_created_date"));
 		user.setModifiedDate(rs.getTimestamp("user_modified_date"));
-		int userActive = rs.getInt("user_isactive");
-		user.setActive(userActive == 1 ? true : false);
+
+		user.setActive(rs.getInt("user_isactive"));
+
 		user.setAddress(rs.getString("user_address"));
 		user.setLoginCount(rs.getInt("login_count"));
 
@@ -83,12 +124,40 @@ public class UserDAOImpl implements UserDAO {
 
 	// quyet anh
 	@Override
-	public List<UserObject> getAllUsers() {
-
+	public List<UserObject> getAllUsers(String keyword, String sortBy) {
 		List<UserObject> list = new ArrayList<>();
-		String sql = "SELECT u.*, r.role_name FROM users u INNER JOIN roles r ON u.role_id = r.role_id ORDER BY u.user_created_date DESC;";
 
-		try (Connection conn = DBUtil.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		// 1. Khởi tạo câu SQL gốc
+		StringBuilder sql = new StringBuilder("SELECT u.*, r.role_name FROM users u INNER JOIN roles r ON u.role_id = r.role_id ");
+
+		boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
+
+		// 2. Nối thêm điều kiện TÌM KIẾM (Nếu có)
+		if (hasKeyword) {
+			sql.append("WHERE u.user_fullname LIKE ? OR u.user_email LIKE ? ");
+		}
+
+		// 3. Nối thêm điều kiện SẮP XẾP (Nếu có)
+		if ("name".equals(sortBy)) {
+			// Cắt lấy từ cuối cùng trong chuỗi user_fullname để sắp xếp theo Tên (A-Z)
+			sql.append("ORDER BY SUBSTRING_INDEX(TRIM(u.user_fullname), ' ', -1) ASC ");
+		} else if ("id".equals(sortBy)) {
+			sql.append("ORDER BY u.user_id ASC ");
+		} else {
+			// Mặc định luôn là mới nhất lên đầu
+			sql.append("ORDER BY u.user_created_date DESC ");
+		}
+
+		try (Connection conn = DBUtil.getConnection();
+			 PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+			// 4. Đổ dữ liệu chữ vào dấu ? nếu có tìm kiếm
+			if (hasKeyword) {
+				String searchPattern = "%" + keyword.trim() + "%";
+				ps.setString(1, searchPattern);
+				ps.setString(2, searchPattern);
+			}
+
 			ResultSet rs = ps.executeQuery();
 			while (rs.next()) {
 				UserObject p = new UserObject();
@@ -98,8 +167,7 @@ public class UserDAOImpl implements UserDAO {
 				p.setGender(rs.getString("gender"));
 				p.setAddress(rs.getString("user_address"));
 				p.setLoginCount(rs.getInt("login_count"));
-				int userActive = rs.getInt("user_isactive");
-				p.setActive(userActive == 1 ? true : false);
+				p.setActive(rs.getInt("user_isactive"));
 				p.setEmail(rs.getString("user_email"));
 				p.setPhoneNumber(rs.getString("user_phone_number"));
 				p.setCreateDate(rs.getDate("user_created_date"));
@@ -110,11 +178,8 @@ public class UserDAOImpl implements UserDAO {
 				r.setRoleName(rs.getString("role_name"));
 				p.setRole(r);
 
-
 				list.add(p);
 			}
-
-
 		} catch (SQLException e) {
 			System.err.println("Lỗi getAllUsers: " + e.getMessage());
 			e.printStackTrace();
@@ -138,8 +203,7 @@ public class UserDAOImpl implements UserDAO {
 				p.setAddress(rs.getString("user_address"));
 				p.setLoginCount(rs.getInt("login_count"));
 
-				int userActive = rs.getInt("user_isactive");
-				p.setActive(userActive == 1 ? true : false);
+				p.setActive(rs.getInt("user_isactive"));
 				p.setEmail(rs.getString("user_email"));
 				p.setPhoneNumber(rs.getString("user_phone_number"));
 				p.setCreateDate(rs.getDate("user_created_date"));
@@ -158,36 +222,33 @@ public class UserDAOImpl implements UserDAO {
 		return null;
 	}
 
-	@Override
-	public boolean deleteUser(int user_id) {
-		String sql = "DELETE FROM users WHERE user_id=?";
-		try (Connection conn = DBUtil.getConnection(); PreparedStatement pre = conn.prepareStatement(sql)) {
-			pre.setInt(1, user_id);
-			return exe(conn, pre);
-		} catch (SQLException e) {
-			System.err.println("Lỗi deleteUser: " + e.getMessage());
-			e.printStackTrace();
-		}
-		return false;
-	}
+
 
 	@Override
 	public boolean deactivateUser(int user_id) {
 		System.out.println("Thực thi deactivateUser cho user_id: " + user_id);
 		String sql = "UPDATE users SET user_isactive = 3 WHERE user_id = ?";
-		try (Connection conn = DBUtil.getConnection(); PreparedStatement pre = conn.prepareStatement(sql)) {
+		try (Connection conn = DBUtil.getConnection();
+			 PreparedStatement pre = conn.prepareStatement(sql)) {
+
 			if (conn == null) {
 				System.err.println("Kết nối CSDL là null");
 				return false;
 			}
+
+			// THÊM DÒNG NÀY: Chìa khóa giải quyết lỗi ảo
+			conn.setAutoCommit(false);
+
 			pre.setInt(1, user_id);
 			return exe(conn, pre);
+
 		} catch (SQLException e) {
 			System.err.println("Lỗi deactivateUser: " + e.getMessage());
 			e.printStackTrace();
 			return false;
 		}
 	}
+
 	@Override
 	public Map<String, Integer> getNewUsersByMonth() {
 		Map<String, Integer> result = new LinkedHashMap<>();
@@ -292,7 +353,10 @@ public class UserDAOImpl implements UserDAO {
 			pre.setString(5, user.getEmail());
 			pre.setDate(6, new java.sql.Date(user.getCreateDate().getTime()));
 			pre.setDate(7, null); // modified_date = NULL
-			pre.setBoolean(8, user.isActive());
+
+			// ĐÃ SỬA DÒNG NÀY: Chuyển sang setInt và getActive()
+			pre.setInt(8, user.getActive());
+
 			pre.setString(9, user.getAddress());
 			pre.setInt(10, user.getLoginCount()); // mặc định là 0 hoặc 1
 			pre.setInt(11, user.getRole().getRoleId());
@@ -336,18 +400,25 @@ public class UserDAOImpl implements UserDAO {
 	@Override
 	public List<UserObject> getInactiveSoonUsers(int limit) {
 		List<UserObject> list = new ArrayList<>();
+
+		// ĐÃ TỐI ƯU HÓA LOGIC SQL:
+		// 1. Chỉ tìm những người đang hoạt động (user_isactive = 1)
+		// 2. Ưu tiên những người có Số lần đăng nhập thấp nhất (login_count ASC)
+		// 3. Nếu modified_date là NULL, dùng tạm create_date để đánh giá độ "cũ" (COALESCE)
 		String sql = "SELECT u.*, r.role_name " +
 				"FROM users u " +
 				"JOIN roles r ON u.role_id = r.role_id " +
-				"WHERE u.user_modified_date IS NOT NULL " +
-				"ORDER BY u.user_modified_date ASC " +
+				"WHERE u.user_isactive = 1 " +
+				"ORDER BY u.login_count ASC, COALESCE(u.user_modified_date, u.user_created_date) ASC " +
 				"LIMIT ?";
+
 		try (Connection conn = DBUtil.getConnection();
 			 PreparedStatement ps = conn.prepareStatement(sql)) {
 			ps.setInt(1, limit);
-			ResultSet rs = ps.executeQuery();
-			while (rs.next()) {
-				list.add(mapRowToUser(rs)); // dùng hàm mapRowToUser có sẵn
+			try (ResultSet rs = ps.executeQuery()) {
+				while (rs.next()) {
+					list.add(mapRowToUser(rs));
+				}
 			}
 		} catch (SQLException e) {
 			System.err.println("Lỗi getInactiveSoonUsers: " + e.getMessage());
@@ -355,5 +426,23 @@ public class UserDAOImpl implements UserDAO {
 		return list;
 	}
 
+	// Hàm này sẽ tự động tìm user theo email và đổi trạng thái thành 2 (Tạm khóa)
+	@Override
+	public void lockUserAccount(String email) {
+		String sql = "UPDATE users SET user_isactive = 2 WHERE user_email = ?";
+		try (Connection conn = DBUtil.getConnection();
+			 PreparedStatement ps = conn.prepareStatement(sql)) {
+
+			// Ở đây chỉ chạy 1 lệnh Update đơn giản nên không cần setAutoCommit(false)
+			ps.setString(1, email);
+			int result = ps.executeUpdate();
+
+			if(result > 0) {
+				System.out.println("Đã tự động khóa tài khoản: " + email + " do đăng nhập sai 5 lần.");
+			}
+		} catch (SQLException e) {
+			System.err.println("Lỗi khi khóa tài khoản: " + e.getMessage());
+		}
+	}
 
 }
