@@ -23,4 +23,5 @@ public interface UserDAO {
     public boolean updateUser(UserObject user);
     public List<UserObject> getInactiveSoonUsers(int limit);
     void lockUserAccount(String email);
+    String checkUserExistsDetail(String fullname, String email, String phone);
 }

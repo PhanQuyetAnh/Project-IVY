@@ -50,7 +50,7 @@
 
                                 <div class="product-item" style="position: relative;">
                                     <div class="inner-image">
-                                        <a href="<c:url value='/public/product-detail?id=${item.productCode}'/>">
+                                        <a href="<c:url value='/public/product-detail?id=${item.productId}'/>">
                                             <img src="<c:url value='${item.productImage}'/>" alt="${item.productName}">
                                             <img src="<c:url value='${item.productImage}'/>" alt="${item.productName}" class="hover-img">
                                         </a>
@@ -70,7 +70,7 @@
                                         </div>
 
                                         <h3 class="inner-title">
-                                            <a href="<c:url value='/public/product-detail?id=${item.productCode}'/>">${item.productName}</a>
+                                            <a href="<c:url value='/public/product-detail?id=${item.productId}'/>">${item.productName}</a>
                                         </h3>
 
                                         <div class="price-product">

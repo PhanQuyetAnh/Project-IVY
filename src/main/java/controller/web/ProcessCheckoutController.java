@@ -6,6 +6,7 @@ import dao.VoucherDAO;
 import dao.Impl.VoucherDAOImpl;
 import model.CartObject;
 import model.OrderObject;
+import model.ProductObject;
 import model.UserObject;
 import model.VoucherObject;
 import util.Config;
@@ -52,10 +53,16 @@ public class ProcessCheckoutController extends HttpServlet {
 
         String fullAddress = address + ", " + ward + ", " + district + ", " + province;
 
+        // ==========================================
+        // ĐÃ SỬA LỖI: TÍNH TỔNG TIỀN THEO GIÁ ĐÃ GIẢM
+        // ==========================================
         double totalAmount = 0;
         for (CartObject item : cartList) {
-            if(item.getProductObject() != null) {
-                totalAmount += item.getProductObject().getProductPrice() * item.getQuantity();
+            ProductObject p = item.getProductObject();
+            if(p != null) {
+                // Tính giá sau khi áp dụng discountPercent của sản phẩm
+                double finalPrice = p.getProductPrice() * (100 - p.getDiscountPercent()) / 100.0;
+                totalAmount += finalPrice * item.getQuantity();
             }
         }
 
@@ -130,7 +137,7 @@ public class ProcessCheckoutController extends HttpServlet {
                 String vnp_Command = "pay";
                 String orderType = "other";
 
-                // VNPAY yêu cầu số tiền phải nhân với 100. Lúc này totalAmount đã được trừ tiền voucher ở trên.
+                // VNPAY yêu cầu số tiền phải nhân với 100. Lúc này totalAmount đã được tính đúng ở trên.
                 long amount = (long) (totalAmount * 100);
 
                 String vnp_TxnRef = String.valueOf(orderId); // Dùng ID đơn hàng làm mã giao dịch

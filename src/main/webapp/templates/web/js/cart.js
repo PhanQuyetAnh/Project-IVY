@@ -1,12 +1,11 @@
 /**
  * IVY moda - Cart Logic (SSR Version)
- * Fix: Chống xung đột Toast & Hiển thị thông báo xóa + Fix lỗi trang Giỏ hàng lớn
+ * Fix: Validate ngay khi người dùng gõ số, bắt sự kiện phím Enter và gửi API chuẩn xác.
  */
 
 const contextPath = window.location.pathname.includes('/jsp_servlet_war_exploded') ? '/jsp_servlet_war_exploded' : '';
 
 $(document).ready(function() {
-    // 1. Sidebar reload state
     if (sessionStorage.getItem('keepMiniCartOpen') === 'true') {
         $('#miniCartSidebar').css('transition', 'none');
         $('#miniCartSidebar, #miniCartOverlay').addClass('active');
@@ -16,17 +15,14 @@ $(document).ready(function() {
         sessionStorage.removeItem('keepMiniCartOpen');
     }
 
-    // 2. Sidebar Toggle
     $(document).on('click', '.header .inner-cart a, .cart-icon, .bag-icon, #openMiniCart', function(e) {
         e.preventDefault();
         e.stopPropagation();
 
-        // Chặn mở Minicart nếu đang đứng ở trang Giỏ hàng lớn (Trang 1) hoặc trang Thanh toán
         if (window.location.pathname.includes('/customer/cart') || window.location.pathname.includes('/customer/checkout')) {
-            window.location.href = contextPath + '/customer/cart'; // Nếu lỡ bấm icon giỏ hàng thì load lại trang cart
+            window.location.href = contextPath + '/customer/cart';
             return;
         }
-
         $('#miniCartSidebar, #miniCartOverlay').addClass('active');
     });
 
@@ -34,18 +30,31 @@ $(document).ready(function() {
         $('#miniCartSidebar, #miniCartOverlay').removeClass('active');
     });
 
-    // 3. Quantity Up
+    // ==========================================
+    // TĂNG SỐ LƯỢNG (+)
+    // ==========================================
     $(document).on('click', '.btn-qty-up', function() {
         const pid = $(this).attr('data-product-id');
         const size = $(this).attr('data-product-size');
-        updateCartQuantity(pid, size, 'up');
+        const $input = $(this).closest('.item-quantity-control').find('.qty-input-manual');
+        const currentQty = parseInt($input.val()) || 1;
+        const maxQty = parseInt($(this).attr('data-product-max')) || 0;
+
+        if (currentQty < maxQty) {
+            updateCartQuantity(pid, size, 'up');
+        } else {
+            showToast("Kho chỉ còn tối đa " + maxQty + " sản phẩm!");
+        }
     });
 
-    // 4. Quantity Down
+    // ==========================================
+    // GIẢM SỐ LƯỢNG (-)
+    // ==========================================
     $(document).on('click', '.btn-qty-down', function() {
         const pid = $(this).attr('data-product-id');
         const size = $(this).attr('data-product-size');
-        const currentQty = parseInt($(this).closest('.item-quantity-control').find('.qty-display').text()) || 1;
+        const $input = $(this).closest('.item-quantity-control').find('.qty-input-manual');
+        const currentQty = parseInt($input.val()) || 1;
 
         if (currentQty <= 1) {
             showToast('! Đã xóa sản phẩm khỏi giỏ hàng');
@@ -53,7 +62,46 @@ $(document).ready(function() {
         updateCartQuantity(pid, size, 'down');
     });
 
-    // 5. Remove Item
+    // ==========================================
+    // BẮT SỰ KIỆN GÕ PHÍM TRỰC TIẾP (GIÁM SÁT REALTIME)
+    // ==========================================
+    $(document).on('input', '.qty-input-manual', function() {
+        let val = parseInt($(this).val());
+        const maxQty = parseInt($(this).attr('data-product-max')) || 0;
+
+        if (!isNaN(val)) {
+            if (val > maxQty) {
+                showToast("Kho chỉ còn tối đa " + maxQty + " sản phẩm!");
+                $(this).val(maxQty); // Ép lùi về số max của kho ngay lập tức
+            }
+        }
+    });
+
+    // THÊM MỚI: Bắt sự kiện ấn phím ENTER (Mã 13) để tương thích trên Chrome
+    $(document).on('keypress', '.qty-input-manual', function(e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            $(this).blur(); // Ép trình duyệt kích hoạt sự kiện 'change' bên dưới
+        }
+    });
+
+    // Khi gõ xong (Enter hoặc Click chuột ra ngoài) -> Gửi AJAX lưu xuống Backend
+    $(document).on('change', '.qty-input-manual', function() {
+        const pid = $(this).attr('data-product-id');
+        const size = $(this).attr('data-product-size');
+        let val = parseInt($(this).val());
+        const maxQty = parseInt($(this).attr('data-product-max')) || 0;
+
+        if (isNaN(val) || val < 1) {
+            val = 1;
+            $(this).val(val);
+        }
+
+        // Gọi Backend thông qua hàm dùng chung đã được sửa
+        updateCartQuantity(pid, size, 'set', val);
+    });
+
+    // XÓA ITEM
     $(document).on('click', '.btn-remove-item', function() {
         if (confirm("Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?")) {
             const pid = $(this).attr('data-product-id');
@@ -65,9 +113,13 @@ $(document).ready(function() {
 
 // ========== AJAX FUNCTIONS ==========
 
-function updateCartQuantity(pid, size, action) {
+// SỬA QUAN TRỌNG: Thêm tham số qty=0 và truyền quantity vào $.post
+function updateCartQuantity(pid, size, action, qty = 0) {
     $.post(contextPath + '/customer/update-cart', {
-        product_id: pid, size: size, action: action
+        product_id: pid,
+        size: size,
+        action: action,
+        quantity: qty // Đẩy con số khách hàng vừa gõ xuống Java
     }, function() {
         refreshCartUI(true);
     }).fail(function() {
@@ -76,10 +128,6 @@ function updateCartQuantity(pid, size, action) {
 }
 
 function refreshCartUI(openSidebar = false) {
-    // =================================================================
-    // CHỐT CHẶN: Kiểm tra nếu đang ở trang Giỏ hàng lớn thì load lại luôn
-    // Không cho chạy lệnh bóc tách HTML và xổ Minicart bên dưới nữa
-    // =================================================================
     if (window.location.pathname.includes('/customer/cart')) {
         window.location.reload();
         return;
@@ -112,11 +160,9 @@ function refreshCartUI(openSidebar = false) {
         .catch(error => console.error('Lỗi khi cập nhật giỏ hàng:', error));
 }
 
-
 function deleteCartItem(pid, size) {
-    // 1. Sửa lại đường link cho khớp với @WebServlet
     $.post(contextPath + '/customer/cart-delete-item', {
-        productId: pid, // 2. Sửa chữ product_id thành productId cho khớp request.getParameter
+        productId: pid,
         size: size
     }, function() {
         showToast('! Đã xóa sản phẩm khỏi giỏ hàng');
@@ -131,9 +177,7 @@ function updateCartBadge() {
 }
 
 // ========== TOAST ENGINE ==========
-
 let toastTimeout;
-
 function showToast(message, duration = 3000) {
     $('#ivyAppToast').remove();
     clearTimeout(toastTimeout);
@@ -155,9 +199,7 @@ function showToast(message, duration = 3000) {
                     transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
                     bottom: auto !important;
                 }
-                #ivyAppToast.active {
-                    right: 20px !important; 
-                }
+                #ivyAppToast.active { right: 20px !important; }
             </style>
         `);
     }
@@ -168,19 +210,13 @@ function showToast(message, duration = 3000) {
     let bgColor = '#28a745';
     let msgLower = message.toLowerCase();
     if (msgLower.includes('xóa') || message.includes('!')) bgColor = '#dc3545';
-    else if (msgLower.includes('lỗi') || msgLower.includes('vui lòng')) bgColor = '#ffc107';
+    else if (msgLower.includes('lỗi') || msgLower.includes('vui lòng') || msgLower.includes('chỉ còn')) bgColor = '#ffc107';
 
-    $toast.text(message).css({
-        'background-color': bgColor,
-        'color': (bgColor === '#ffc107' ? '#000' : '#fff')
-    });
-
+    $toast.text(message).css({ 'background-color': bgColor, 'color': (bgColor === '#ffc107' ? '#000' : '#fff') });
     setTimeout(() => { $toast.addClass('active'); }, 10);
 
     toastTimeout = setTimeout(() => {
         $toast.removeClass('active');
-        setTimeout(() => {
-            $toast.remove();
-        }, 500);
+        setTimeout(() => { $toast.remove(); }, 500);
     }, duration);
 }

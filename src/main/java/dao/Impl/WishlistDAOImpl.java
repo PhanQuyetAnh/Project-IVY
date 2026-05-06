@@ -51,8 +51,8 @@ public class WishlistDAOImpl implements WishlistDAO {
     @Override
     public List<ProductObject> getWishlistByUserId(int userId) {
         List<ProductObject> list = new ArrayList<>();
-        // Nối bảng Product và wishlist thông qua product_code
-        String sql = "SELECT p.* FROM Product p INNER JOIN wishlist w ON p.product_code = w.product_code WHERE w.user_id = ? ORDER BY w.created_date DESC";
+        // ĐÃ SỬA: Lấy thêm p.id để làm link chi tiết
+        String sql = "SELECT p.* FROM Product p INNER JOIN wishlist w ON p.product_code = w.product_code WHERE w.user_id = ? AND p.isDeleted = FALSE ORDER BY w.created_date DESC";
 
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -62,11 +62,13 @@ public class WishlistDAOImpl implements WishlistDAO {
 
             while (rs.next()) {
                 ProductObject p = new ProductObject();
-                // Map dữ liệu từ bảng Product vào Model (bạn xem lại tên field trong Model cho chuẩn nhé)
+                // Map ID kiểu số để truyền vào link ?id=...
+                p.setProductId(rs.getInt("id"));
                 p.setProductCode(rs.getString("product_code"));
                 p.setProductName(rs.getString("product_name"));
                 p.setProductPrice(rs.getDouble("product_price"));
-                p.setProductImage(rs.getString("product_image"));
+                // Lấy ảnh đầu tiên (product_image1) để hiển thị ở wishlist
+                p.setProductImage(rs.getString("product_image1"));
                 list.add(p);
             }
         } catch (SQLException e) {

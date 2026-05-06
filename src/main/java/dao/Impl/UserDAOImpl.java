@@ -445,4 +445,47 @@ public class UserDAOImpl implements UserDAO {
 		}
 	}
 
+	@Override
+	public String checkUserExistsDetail(String fullname, String email, String phone) {
+		Connection conn = null;
+		try {
+			conn = DBUtil.getConnection();
+
+			// 1. Kiểm tra Email trước (vì Email thường là quan trọng nhất)
+			String sqlEmail = "SELECT 1 FROM users WHERE user_email = ?";
+			try (PreparedStatement ps = conn.prepareStatement(sqlEmail)) {
+				ps.setString(1, email);
+				try (ResultSet rs = ps.executeQuery()) {
+					if (rs.next()) return "email_exists";
+				}
+			}
+
+			// 2. Kiểm tra Số điện thoại
+			String sqlPhone = "SELECT 1 FROM users WHERE user_phone_number = ?";
+			try (PreparedStatement ps = conn.prepareStatement(sqlPhone)) {
+				ps.setString(1, phone);
+				try (ResultSet rs = ps.executeQuery()) {
+					if (rs.next()) return "phone_exists";
+				}
+			}
+
+			// 3. Kiểm tra Tên đăng nhập (Fullname)
+			String sqlName = "SELECT 1 FROM users WHERE user_fullname = ?";
+			try (PreparedStatement ps = conn.prepareStatement(sqlName)) {
+				ps.setString(1, fullname);
+				try (ResultSet rs = ps.executeQuery()) {
+					if (rs.next()) return "username_exists";
+				}
+			}
+
+		} catch (SQLException e) {
+			System.err.println("Lỗi checkUserExistsDetail: " + e.getMessage());
+			e.printStackTrace();
+		} finally {
+			try { if (conn != null) conn.close(); } catch (SQLException e) { e.printStackTrace(); }
+		}
+
+		return null; // Không trùng cái nào cả, dữ liệu sạch
+	}
+
 }

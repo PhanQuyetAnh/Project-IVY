@@ -23,16 +23,16 @@
 <body>
 <%
 	String uri = request.getRequestURI();
-	boolean isLoginPage = uri.contains("login");
+	boolean isAuthPage = uri.contains("login") || uri.contains("register");
 %>
 
-<% if (!isLoginPage) { %>
+<% if (!isAuthPage) { %>
 <%@ include file="/common/web/header.jsp"%>
 <% } %>
 
 <dec:body/>
 
-<% if (!isLoginPage) { %>
+<% if (!isAuthPage) { %>
 <%@ include file="/common/web/footer.jsp"%>
 <% } %>
 

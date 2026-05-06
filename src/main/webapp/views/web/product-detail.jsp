@@ -8,7 +8,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Chi tiết sản phẩm | IVY moda</title>
-
 </head>
 <body>
 <div class="product-detail">
@@ -23,7 +22,6 @@
             </nav>
         </div>
         <c:if test="${not empty product}">
-
             <div class="row">
                 <div class="col-md-6">
                     <div class="product-detail__gallery">
@@ -59,7 +57,6 @@
                                         <span class="visually-hidden">Next</span>
                                     </button>
                                 </div>
-
                             </div>
                             <div class="product-gallery__slide-small">
                                 <div class="swiper-wraper">
@@ -125,8 +122,6 @@
                                 <button class="check-empty"></button>
                                 <button class="check"><i class="fa-solid fa-check"></i></button>
                             </div>
-
-
                         </div>
                         <div class="product-detail__size">
                             <div class="product-detail__size-input">
@@ -138,22 +133,47 @@
                             </div>
                             <p class="check-size"><i class=" fa-solid fa-ruler"></i>Kiểm tra size của bạn</p>
                         </div>
-                        <div class="product-detail__quanlity">
-                            <h3>Số lượng</h3>
-                            <div class="product-detail__num">
-                                <div class="product-detail__num-decre"><i class="fa-solid fa-minus"></i></div>
-                                <span>1</span>
-                                <div class="product-detail__num-incre"><i class="fa-solid fa-plus"></i></div>
-                            </div>
-                        </div>
-                        <div class="product-detail__action">
-                            <button class="add">Thêm vào giỏ</button>
-                            <button class="buy">Mua hàng</button>
-<%--                            <button class="heart"><i class="bi bi-heart"></i></button>--%>
-                            <button class="heart ${isLiked ? 'active' : ''}">
-                                <i class="bi ${isLiked ? 'bi-heart-fill text-danger' : 'bi-heart'}"></i>
-                            </button>
-                        </div>
+
+                            <%-- LOGIC KIỂM SOÁT SỐ LƯỢNG TỒN KHO TRÊN UI --%>
+                        <c:choose>
+                            <c:when test="${product.productQuantity > 0}">
+                                <p class="text-success mb-2 mt-2" style="font-size: 14px;">
+                                    <i class="fa-solid fa-check-circle"></i> Sẵn có: ${product.productQuantity} sản phẩm
+                                </p>
+                                <div class="product-detail__quanlity">
+                                    <h3>Số lượng</h3>
+                                    <div class="product-detail__num">
+                                        <div class="product-detail__num-decre"><i class="fa-solid fa-minus"></i></div>
+                                            <%-- ĐÃ ĐỔI SANG ID ĐỘC LẬP ĐỂ TRÁNH XUNG ĐỘT JS --%>
+                                        <input type="text" id="detailQtyInput" value="1" style="width: 50px; text-align: center; border: none; font-weight: bold; font-size: 16px; outline: none; background: transparent;">
+                                        <div class="product-detail__num-incre"><i class="fa-solid fa-plus"></i></div>
+                                    </div>
+                                </div>
+                                <div class="product-detail__action">
+                                    <button class="add">Thêm vào giỏ</button>
+                                    <button class="buy">Mua hàng</button>
+                                    <button class="heart ${isLiked ? 'active' : ''}">
+                                        <i class="bi ${isLiked ? 'bi-heart-fill text-danger' : 'bi-heart'}"></i>
+                                    </button>
+                                </div>
+                            </c:when>
+                            <c:otherwise>
+                                <div class="product-detail__quanlity mt-3 mb-3">
+                                    <div class="alert alert-danger" style="width: 100%; text-align: center; margin-bottom: 0; padding: 10px;">
+                                        <i class="fa-solid fa-xmark-circle"></i> Sản phẩm này hiện đã hết hàng!
+                                    </div>
+                                </div>
+                                <div class="product-detail__action">
+                                    <button class="add" disabled style="background-color: #ccc; cursor: not-allowed; border: none; color: #666;">Thêm vào giỏ</button>
+                                    <button class="buy" disabled style="background-color: #ccc; cursor: not-allowed; border: none; color: #666;">Mua hàng</button>
+                                    <button class="heart ${isLiked ? 'active' : ''}">
+                                        <i class="bi ${isLiked ? 'bi-heart-fill text-danger' : 'bi-heart'}"></i>
+                                    </button>
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
+                            <%-- KẾT THÚC LOGIC TỒN KHO TRÊN UI --%>
+
                         <div class="product-detail__find">
                             <a>Tìm tại cửa hàng</a>
                         </div>
@@ -169,10 +189,7 @@
                             <div class="tab-contents">
                                 <div id="tab1">
                                     <div class="tab-content-inner">
-                                        <p>Bliss Dress là sự kết hợp hoàn hảo giữa vẻ đẹp thanh lịch và nữ tính,
-                                            phù hợp cho nhiều dịp khác nhau từ đi chơi, dự tiệc đến dạo phố. Đây là một lựa chọn tuyệt vời cho nàng
-                                            muốn thể hiện nét dịu dàng qua phong cách thời trang của mình.
-                                        </p>
+                                        <p>${product.productDescription}</p>
                                         <h3>Thông tin mẫu:</h3>
                                         <h3>Chiều cao: <span>167cm</span></h3>
                                         <h3>Cân nặng: <span>50kg</span></h3>
@@ -193,7 +210,7 @@
                                         <h3>Kiểu dáng:  <span>Đầm xòe</span></h3>
                                         <h3>Độ dài:  <span>qua gối</span></h3>
                                         <h3>Họa tiết:  <span>Trơn</span></h3>
-                                        <h3>Chất liệu: <span>Tynsi</span></h3>
+                                        <h3>Chất liệu: <span>Tuytsi</span></h3>
                                     </div>
                                     <div class="show-more-btn">
                                         <i class="fa-solid fa-chevron-down"></i>
@@ -218,17 +235,17 @@
                                 </div>
                             </div>
                             <div class="product-detail__tab-body">
-
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </c:if>
         <c:if test="${empty product}">
-            <div class="inner-wrap">
-                <p>Sản phẩm không tồn tại hoặc đã bị xóa.</p>
+            <div class="inner-wrap text-center py-5">
+                <i class="fa-solid fa-box-open fa-4x text-secondary mb-3"></i>
+                <h3 class="text-secondary">Sản phẩm không tồn tại hoặc đã bị xóa.</h3>
+                <a href="${pageContext.request.contextPath}/home" class="btn btn-dark mt-3">Quay lại trang chủ</a>
             </div>
         </c:if>
     </div>
@@ -241,8 +258,9 @@
 
 <script>
     $(document).ready(function() {
-        // Biến isLoggedIn từ JSP
         const isLoggedIn = <%= isLoggedIn %>;
+        // Lấy số lượng tồn kho từ Java đẩy xuống JS để chặn bấm dấu +
+        const maxQuantity = parseInt('${product.productQuantity > 0 ? product.productQuantity : 0}');
 
         // 1. Logic chuyển tab
         $(".tab-navs a").click(function (e) {
@@ -272,32 +290,61 @@
             return $(".product-detail__size-input p.active-size").length > 0;
         }
 
-        // 5. Logic tăng/giảm số lượng với kiểm tra size
-        $(".product-detail__num-incre, .product-detail__num-decre").click(function() {
+        // ==========================================
+        // 5. TĂNG/GIẢM SỐ LƯỢNG (SỬA LẠI THEO ID MỚI)
+        // ==========================================
+        $(".product-detail__num-incre, .product-detail__num-decre").off("click").on("click", function(e) {
+            e.preventDefault();
             if (!isSelectedSize()) {
                 showToast("Vui lòng chọn size sản phẩm!");
                 return false;
             }
 
-            const $quantitySpan = $(".product-detail__num span");
-            let currentQuantity = parseInt($quantitySpan.text());
+            const $quantityInput = $("#detailQtyInput"); // Lấy giá trị từ ID mới
+            let currentQuantity = parseInt($quantityInput.val());
+
+            if (isNaN(currentQuantity)) currentQuantity = 1;
 
             if ($(this).hasClass("product-detail__num-incre")) {
-                currentQuantity++;
+                if (currentQuantity < maxQuantity) {
+                    currentQuantity++;
+                } else {
+                    showToast("Xin lỗi, kho chỉ còn tối đa " + maxQuantity + " sản phẩm!");
+                }
             } else if ($(this).hasClass("product-detail__num-decre")) {
                 if (currentQuantity > 1) {
                     currentQuantity--;
                 }
             }
 
-            $quantitySpan.text(currentQuantity);
+            $quantityInput.val(currentQuantity);
+        });
+
+        // Bắt sự kiện khi khách hàng tự gõ phím vào ô input
+        $("#detailQtyInput").on("input change", function() {
+            let val = parseInt($(this).val());
+
+            // Xử lý nếu nhập số âm, số 0 hoặc chữ bậy bạ
+            if (isNaN(val) || val < 1) {
+                $(this).val(1);
+            }
+            // Xử lý nếu gõ số vượt quá tồn kho
+            else if (val > maxQuantity) {
+                showToast("Xin lỗi, kho chỉ còn tối đa " + maxQuantity + " sản phẩm!");
+                $(this).val(maxQuantity);
+            }
+            // Hợp lệ
+            else {
+                $(this).val(val);
+            }
         });
 
         // ==========================================
-        // 6. THÊM VÀO GIỎ HÀNG (.add)
+        // 6. THÊM VÀO GIỎ HÀNG (ĐÃ NGĂN CHẶN TRÙNG LẶP REQUEST)
         // ==========================================
-        $(".add").click(function(e) {
+        $(".add").off("click").on("click", function(e) {
             e.preventDefault();
+            e.stopImmediatePropagation(); // CẤM MỌI FILE JS KHÁC CHẠY
 
             if (!isLoggedIn) {
                 showToast("Vui lòng đăng nhập để thực hiện chức năng này!");
@@ -309,12 +356,10 @@
                 return false;
             }
 
-            // Lấy thông tin (Sửa lại biến lấy quantity cho đúng HTML của bạn)
-            const productId = '${product.productId}'; // Sửa thành productId theo chuẩn class của bạn
+            const productId = '${product.productId}';
             const selectedSize = $(".product-detail__size-input p.active-size").text().trim();
-            const quantity = parseInt($(".product-detail__num span").text());
+            const quantity = parseInt($("#detailQtyInput").val()); // Đọc từ ID mới
 
-            // Gửi AJAX request
             $.ajax({
                 url: '${pageContext.request.contextPath}/customer/add-to-cart',
                 type: 'POST',
@@ -344,10 +389,11 @@
         });
 
         // ==========================================
-        // 7. MUA HÀNG NGAY (.buy)
+        // 7. MUA HÀNG NGAY (ĐÃ NGĂN CHẶN TRÙNG LẶP REQUEST)
         // ==========================================
-        $(".buy").click(function(e) {
+        $(".buy").off("click").on("click", function(e) {
             e.preventDefault();
+            e.stopImmediatePropagation(); // CẤM MỌI FILE JS KHÁC CHẠY
 
             if (!isLoggedIn) {
                 showToast("Vui lòng đăng nhập để thực hiện chức năng này!");
@@ -359,14 +405,12 @@
                 return false;
             }
 
-            // Lấy thông tin giống hệt nút Thêm vào giỏ
-            const productId = '${product.productId}'; // Dùng productId để tránh lỗi 500
+            const productId = '${product.productId}';
             const selectedSize = $(".product-detail__size-input p.active-size").text().trim();
-            const quantity = parseInt($(".product-detail__num span").text());
+            const quantity = parseInt($("#detailQtyInput").val()); // Đọc từ ID mới
 
-            // Gửi AJAX đẩy vào Giỏ hàng, thành công thì chuyển trang luôn
             $.ajax({
-                url: '${pageContext.request.contextPath}/customer/add-to-cart', // Dùng chung API thêm vào giỏ
+                url: '${pageContext.request.contextPath}/customer/add-to-cart',
                 type: 'POST',
                 dataType: 'json',
                 data: {
@@ -379,7 +423,6 @@
                 },
                 success: function(response) {
                     if (response.status === 'success') {
-                        // CHUYỂN TRANG THẲNG SANG GIỎ HÀNG LỚN (HOẶC CHECKOUT TÙY BẠN)
                         window.location.href = '${pageContext.request.contextPath}/customer/cart';
                     } else {
                         showToast(response.message);
@@ -391,43 +434,35 @@
             });
         });
 
-
-        // 8. Logic nút "Yêu thích" (Tích hợp AJAX xuống DB)
-        $(".heart").click(function(e) {
-            e.preventDefault(); // Ngăn trình duyệt load lại trang
+        // 8. Logic nút "Yêu thích"
+        $(".heart").off("click").on("click", function(e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
 
             if (!isLoggedIn) {
                 showToast("Vui lòng đăng nhập để thực hiện chức năng này!");
-                // Hoặc bạn có thể dùng alert, hoặc chuyển hướng sang trang login
-                // window.location.href = '${pageContext.request.contextPath}/login';
                 return false;
             }
 
             const button = $(this);
             const icon = button.find('i');
-            const productCode = '${product.productCode}'; // Lấy mã sản phẩm hiện tại
+            const productCode = '${product.productCode}';
 
-            // Gửi AJAX request xuống API Wishlist
             $.ajax({
                 url: '${pageContext.request.contextPath}/api/wishlist/toggle',
                 type: 'POST',
-                data: { productCode: productCode }, // Gửi mã sản phẩm
+                data: { productCode: productCode },
                 dataType: 'json',
                 success: function(response) {
                     if (response.status === 'unauthorized') {
                         showToast("Vui lòng đăng nhập lại!");
                     }
                     else if (response.status === 'added') {
-                        // Thêm thành công -> Đổi sang tim đặc màu đỏ
                         button.addClass("active");
                         icon.removeClass("bi-heart").addClass("bi-heart-fill text-danger");
-
-                        // Nếu bạn có dùng SweetAlert2 thì gọi nó ở đây
-                        // Swal.fire({ position: 'bottom-end', icon: 'success', title: response.message, showConfirmButton: false, timer: 1500, toast: true });
                         showToast(response.message);
                     }
                     else if (response.status === 'removed') {
-                        // Bỏ tim thành công -> Đổi về tim rỗng
                         button.removeClass("active");
                         icon.removeClass("bi-heart-fill text-danger").addClass("bi-heart");
                         showToast(response.message);

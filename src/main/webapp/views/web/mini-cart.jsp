@@ -11,7 +11,6 @@
   </div>
 
   <div class="mini-cart-content">
-    <%-- SỬA: Đưa ID miniCartItems ra ngoài vòng c:choose để AJAX luôn tìm thấy vùng này để update --%>
     <div id="miniCartItems">
       <c:choose>
         <c:when test="${empty sessionScope.cart}">
@@ -35,17 +34,16 @@
                     </p>
                     <div class="item-quantity-control">
                       <button class="btn-qty-down" data-product-id="${p.productId}" data-product-size="${item.productSize}">−</button>
-                      <span class="qty-display">${item.quantity}</span>
-                      <button class="btn-qty-up" data-product-id="${p.productId}" data-product-size="${item.productSize}">+</button>
+                        <%-- Đã thay span thành input --%>
+                      <input type="text" class="qty-input-manual qty-display px-2" value="${item.quantity}" data-product-id="${p.productId}" data-product-size="${item.productSize}" data-product-max="${p.productQuantity}" style="width: 40px; text-align: center; border: none; font-weight: bold; background: transparent; outline: none; margin: 0 5px;" />
+                      <button class="btn-qty-up" data-product-id="${p.productId}" data-product-size="${item.productSize}" data-product-max="${p.productQuantity}">+</button>
                     </div>
                     <p class="item-price">
                       <span class="total-price">
                         <c:choose>
-                          <%-- Nếu sản phẩm có giảm giá, tính giá đã giảm rồi mới nhân số lượng --%>
                           <c:when test="${p.discountPercent > 0}">
                             <fmt:formatNumber value="${(p.productPrice * (100 - p.discountPercent) / 100) * item.quantity}" pattern="###,###"/>đ
                           </c:when>
-                          <%-- Nếu không giảm giá, tính theo giá gốc như bình thường --%>
                           <c:otherwise>
                             <fmt:formatNumber value="${p.productPrice * item.quantity}" pattern="###,###"/>đ
                           </c:otherwise>
@@ -66,14 +64,13 @@
   </div>
 
   <div class="mini-cart-footer">
-    <%-- SỬA: Thêm ID miniCartTotalWrapper bao quanh để khi load lại không bị mất định dạng hoặc mất số tiền --%>
     <div class="mini-cart-total" id="miniCartTotalWrapper">
       <span>Tổng cộng:</span>
       <b id="miniCartTotal">
         <c:set var="sum" value="0" />
         <c:forEach var="item" items="${sessionScope.cart}">
           <c:if test="${not empty item.productObject}">
-            <c:set var="sum" value="${sum + (item.productObject.productPrice * item.quantity)}" />
+            <c:set var="sum" value="${sum + ((item.productObject.productPrice * (100 - item.productObject.discountPercent) / 100) * item.quantity)}" />
           </c:if>
         </c:forEach>
         <fmt:formatNumber value="${sum}" pattern="###,###"/>đ

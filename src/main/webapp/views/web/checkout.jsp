@@ -70,7 +70,8 @@
                     <c:set var="sum" value="0" />
                     <c:forEach var="item" items="${sessionScope.cart}">
                         <c:if test="${not empty item.productObject}">
-                            <c:set var="sum" value="${sum + (item.productObject.productPrice * item.quantity)}" />
+                            <%-- ĐÃ SỬA LỖI: Tính tổng tiền lấy giá sau khi đã giảm --%>
+                            <c:set var="sum" value="${sum + ((item.productObject.productPrice * (100 - item.productObject.discountPercent) / 100) * item.quantity)}" />
                         </c:if>
                     </c:forEach>
 
@@ -98,6 +99,7 @@
 
                     <div class="summary-row summary-total">
                         <span class="summary-label">Tiền thanh toán</span>
+                        <%-- Thuộc tính data-original-sum ở đây cũng sẽ nhận giá trị chuẩn để JS tính mã giảm giá --%>
                         <span class="summary-value fw-bold" id="final-total-display" data-original-sum="${sum}">
                             <fmt:formatNumber value="${sum}" pattern="###,###"/>đ
                         </span>

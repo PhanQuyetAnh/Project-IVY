@@ -42,21 +42,20 @@
 
                                             <div class="item-quantity-control d-flex align-items-center border rounded-pill me-4">
                                                 <button class="btn-qty-down border-0 bg-transparent px-2" data-product-id="${p.productId}" data-product-size="${item.productSize}">−</button>
-                                                <span class="qty-display px-3 border-start border-end">${item.quantity}</span>
-                                                <button class="btn-qty-up border-0 bg-transparent px-2" data-product-id="${p.productId}" data-product-size="${item.productSize}">+</button>
+                                                    <%-- Đã thay span thành input --%>
+                                                <input type="text" class="qty-input-manual qty-display px-2 border-start border-end" value="${item.quantity}" data-product-id="${p.productId}" data-product-size="${item.productSize}" data-product-max="${p.productQuantity}" style="width: 50px; text-align: center; border: none; font-weight: bold; background: transparent; outline: none;" />
+                                                <button class="btn-qty-up border-0 bg-transparent px-2" data-product-id="${p.productId}" data-product-size="${item.productSize}" data-product-max="${p.productQuantity}">+</button>
                                             </div>
 
                                             <p class="item-price mb-0 fw-bold text-dark fs-5 me-4">
                                                 <span class="total-price">
                                                     <c:choose>
-                                                      <%-- Nếu sản phẩm có giảm giá, tính giá đã giảm rồi mới nhân số lượng --%>
-                                                      <c:when test="${p.discountPercent > 0}">
-                                                        <fmt:formatNumber value="${(p.productPrice * (100 - p.discountPercent) / 100) * item.quantity}" pattern="###,###"/>đ
-                                                      </c:when>
-                                                      <%-- Nếu không giảm giá, tính theo giá gốc như bình thường --%>
-                                                      <c:otherwise>
-                                                        <fmt:formatNumber value="${p.productPrice * item.quantity}" pattern="###,###"/>đ
-                                                      </c:otherwise>
+                                                        <c:when test="${p.discountPercent > 0}">
+                                                            <fmt:formatNumber value="${(p.productPrice * (100 - p.discountPercent) / 100) * item.quantity}" pattern="###,###"/>đ
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <fmt:formatNumber value="${p.productPrice * item.quantity}" pattern="###,###"/>đ
+                                                        </c:otherwise>
                                                     </c:choose>
                                                 </span>
                                             </p>
@@ -85,7 +84,7 @@
                 <c:forEach var="item" items="${sessionScope.cart}">
                     <c:if test="${not empty item.productObject}">
                         <c:set var="totalQty" value="${totalQty + item.quantity}" />
-                        <c:set var="sum" value="${sum + (item.productObject.productPrice * item.quantity)}" />
+                        <c:set var="sum" value="${sum + ((item.productObject.productPrice * (100 - item.productObject.discountPercent) / 100) * item.quantity)}" />
                     </c:if>
                 </c:forEach>
 

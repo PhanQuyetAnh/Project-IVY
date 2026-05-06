@@ -20,11 +20,11 @@ public class OrderDAOImpl implements OrderDAO {
     public List<OrderInfo> getRecentOrders(int limit) {
         List<OrderInfo> orderList = new ArrayList<>();
         String sql = "SELECT u.user_fullname, p.product_name, od.price, o.order_status, o.order_date " +
-                     "FROM `Order` o " +
-                     "JOIN `OrderDetail` od ON o.order_id = od.order_id " +
-                     "JOIN `Product` p ON od.product_id = p.id " +
-                     "JOIN `users` u ON o.user_id = u.user_id " +
-                     "ORDER BY o.order_date DESC LIMIT ?";
+                "FROM `Order` o " +
+                "JOIN `OrderDetail` od ON o.order_id = od.order_id " +
+                "JOIN `Product` p ON od.product_id = p.id " +
+                "JOIN `users` u ON o.user_id = u.user_id " +
+                "ORDER BY o.order_date DESC LIMIT ?";
 
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -45,7 +45,7 @@ public class OrderDAOImpl implements OrderDAO {
         }
         return orderList;
     }
-    
+
     // ha
     private UserDAO userDAO = new UserDAOImpl();
 
@@ -161,8 +161,8 @@ public class OrderDAOImpl implements OrderDAO {
             if (paymentStatus != null && !paymentStatus.isEmpty()) ps.setString(index++, paymentStatus);
             if (paymentMethod != null && !paymentMethod.isEmpty()) ps.setString(index, paymentMethod);
 
-            try(ResultSet rs = ps.executeQuery()){
-                if(rs.next())
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next())
                     return rs.getInt(1);
             }
 
@@ -243,12 +243,12 @@ public class OrderDAOImpl implements OrderDAO {
         sql.append("LEFT JOIN voucher v ON o.voucher_id = v.voucher_id "); // Join bảng Voucher
         sql.append("WHERE o.order_id = ?");
 
-        try(Connection conn = DBUtil.getConnection();
-            PreparedStatement ps = conn.prepareStatement(sql.toString())){
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
             ps.setInt(1, orderId);
-            try(ResultSet rs = ps.executeQuery()) {
-                while (rs.next()){
-                    if (order.getOrderId() == 0){
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    if (order.getOrderId() == 0) {
                         order.setOrderId(rs.getInt("order_id"));
                         order.setOrderDate(rs.getTimestamp("order_date"));
                         order.setTotalAmount(rs.getDouble("total_amount"));
@@ -294,7 +294,9 @@ public class OrderDAOImpl implements OrderDAO {
                     }
                 }
             }
-        } catch (SQLException e){ e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return order;
     }
 
@@ -358,24 +360,27 @@ public class OrderDAOImpl implements OrderDAO {
     }
 
 
-
     // HÀM TẠO ĐƠN HÀNG (Dùng cho cả COD và VNPAY)
+    // ==========================================
+    // HÀM TẠO ĐƠN HÀNG VÀ TRỪ SỐ LƯỢNG TỒN KHO CÙNG LÚC
     // ==========================================
     @Override
     public int insertOrder(OrderObject order, List<CartObject> cartList) {
         int generatedOrderId = 0;
 
-        // 1. Cập nhật câu SQL để khớp với 14 cột trong DB (trừ order_id tự tăng)
-        // Thứ tự: user_id(1), total_amount(2), order_status(3), payment_status(4), payment_method(5),
-        // order_note(6), shipping_name(7), shipping_phone(8), shipping_address(9),
-        // shipping_fee(10), discount_amount(11), voucher_id(12), order_date(NOW)
+        // SQL lưu hóa đơn chính
         String sqlOrder = "INSERT INTO `Order` (user_id, total_amount, order_status, payment_status, payment_method, order_note, shipping_name, shipping_phone, shipping_address, shipping_fee, discount_amount, voucher_id, order_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
 
+        // SQL lưu chi tiết đơn hàng
         String sqlDetail = "INSERT INTO `OrderDetail` (order_id, product_id, product_size, product_color, quantity_sold, price) VALUES (?, ?, ?, ?, ?, ?)";
+
+        // SQL TRỪ TỒN KHO (ĐÃ BỔ SUNG)
+        String sqlUpdateStock = "UPDATE `Product` SET product_quantity = product_quantity - ? WHERE id = ? AND product_quantity >= ?";
 
         Connection conn = null;
         try {
             conn = DBUtil.getConnection();
+            // Tắt auto-commit để bắt đầu Transaction (Rất quan trọng để tránh lỗi nửa vời)
             conn.setAutoCommit(false);
 
             try (PreparedStatement psOrder = conn.prepareStatement(sqlOrder, java.sql.Statement.RETURN_GENERATED_KEYS)) {
@@ -392,10 +397,8 @@ public class OrderDAOImpl implements OrderDAO {
                 psOrder.setString(7, order.getShippingName());
                 psOrder.setString(8, order.getShippingPhone());
                 psOrder.setString(9, order.getShippingAddress());
-
-                // --- CÁC DÒNG MỚI BỔ SUNG KHỚP VỚI DB ---
-                psOrder.setDouble(10, 0); // shipping_fee (đang để mặc định 0)
-                psOrder.setDouble(11, order.getDiscountAmount()); // discount_amount (số tiền giảm)
+                psOrder.setDouble(10, 0); // shipping_fee
+                psOrder.setDouble(11, order.getDiscountAmount()); // discount_amount
 
                 if (order.getVoucherId() != null) {
                     psOrder.setInt(12, order.getVoucherId()); // voucher_id
@@ -413,18 +416,43 @@ public class OrderDAOImpl implements OrderDAO {
             }
 
             if (generatedOrderId > 0) {
-                try (PreparedStatement psDetail = conn.prepareStatement(sqlDetail)) {
+                try (PreparedStatement psDetail = conn.prepareStatement(sqlDetail);
+                     PreparedStatement psUpdateStock = conn.prepareStatement(sqlUpdateStock)) {
+
                     for (CartObject item : cartList) {
+                        int productId = item.getProductObject().getProductId();
+                        int quantitySold = item.getQuantity();
+
+                        // 1. Set tham số thêm vào bảng OrderDetail
                         psDetail.setInt(1, generatedOrderId);
-                        psDetail.setInt(2, item.getProductObject().getProductId());
+                        psDetail.setInt(2, productId);
                         psDetail.setString(3, item.getProductSize());
-                        psDetail.setString(4, "");
-                        psDetail.setInt(5, item.getQuantity());
+                        psDetail.setString(4, ""); // product_color
+                        psDetail.setInt(5, quantitySold);
                         psDetail.setDouble(6, item.getProductObject().getProductPrice());
                         psDetail.addBatch();
+
+                        // 2. Set tham số trừ tồn kho trong bảng Product
+                        psUpdateStock.setInt(1, quantitySold); // Trừ đi số lượng mua
+                        psUpdateStock.setInt(2, productId);    // Của đúng sản phẩm này
+                        psUpdateStock.setInt(3, quantitySold); // Check thêm: Đảm bảo kho còn >= số lượng mua mới trừ
+                        psUpdateStock.addBatch();
                     }
+
+                    // Thực thi Insert chi tiết đơn
                     psDetail.executeBatch();
+
+                    // Thực thi Update trừ kho
+                    int[] stockUpdateResults = psUpdateStock.executeBatch();
+                    for (int result : stockUpdateResults) {
+                        if (result == 0) {
+                            // Nếu result == 0 tức là có sản phẩm không đủ hàng để trừ -> Hủy ngang toàn bộ quá trình
+                            conn.rollback();
+                            return 0;
+                        }
+                    }
                 }
+                // Vượt qua hết mọi cửa ải thì chốt commit lưu vào DB
                 conn.commit();
             } else {
                 conn.rollback();
@@ -432,7 +460,11 @@ public class OrderDAOImpl implements OrderDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
-            try { if (conn != null) conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
             return 0;
         } finally {
             try {
@@ -440,7 +472,9 @@ public class OrderDAOImpl implements OrderDAO {
                     conn.setAutoCommit(true);
                     conn.close();
                 }
-            } catch (SQLException e) { e.printStackTrace(); }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
         return generatedOrderId;
     }

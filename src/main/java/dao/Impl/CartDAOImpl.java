@@ -24,8 +24,8 @@ public class CartDAOImpl implements CartDAO {
     public List<CartObject> getCartItems(int userId) {
         List<CartObject> cartItems = new ArrayList<>();
         StringBuilder sql = new StringBuilder();
-        // ĐÃ THÊM: p.discount_percent vào câu SELECT
-        sql.append("SELECT p.id, p.product_name, p.product_image1, p.product_price, p.discount_percent, p.product_color, ");
+        // ĐÃ SỬA: Bổ sung thêm p.product_quantity vào câu SELECT
+        sql.append("SELECT p.id, p.product_name, p.product_image1, p.product_price, p.discount_percent, p.product_color, p.product_quantity, ");
         sql.append("c.quantity, c.product_size ");
         sql.append("FROM cart c JOIN Product p ON c.product_id = p.id WHERE c.user_id = ?");
 
@@ -40,10 +40,13 @@ public class CartDAOImpl implements CartDAO {
                 p.setProductName(rs.getString("product_name"));
                 p.setProductImage(rs.getString("product_image1"));
                 p.setProductPrice(rs.getDouble("product_price"));
-
-                // MỞ COMMENT VÀ CHẠY: Vì SQL đã có cột này nên sẽ không bị lỗi nữa
                 p.setDiscountPercent(rs.getInt("discount_percent"));
                 p.setProductColor(rs.getString("product_color"));
+
+                // ==========================================
+                // BẮT BUỘC PHẢI THÊM DÒNG NÀY ĐỂ JS BIẾT SỐ TỒN KHO LÀ BAO NHIÊU
+                p.setProductQuantity(rs.getInt("product_quantity"));
+                // ==========================================
 
                 CartObject c = new CartObject();
                 c.setQuantity(rs.getInt("quantity"));
@@ -53,7 +56,7 @@ public class CartDAOImpl implements CartDAO {
                 cartItems.add(c);
             }
         } catch (SQLException e) {
-            e.printStackTrace(); // Nếu giỏ hàng trống, hãy xem log ở đây để biết lỗi gì
+            e.printStackTrace();
         }
         return cartItems;
     }

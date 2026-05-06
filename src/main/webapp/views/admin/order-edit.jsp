@@ -122,13 +122,49 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function() {
+    // 1. Logic ẩn thông báo sau 3s
     setTimeout(function() {
       let alerts = document.querySelectorAll('.alert');
       alerts.forEach(function(alert) {
         alert.classList.remove('show');
-        setTimeout(() => alert.remove(), 200); // xóa element sau khi hiệu ứng fade out hoàn thành
+        setTimeout(() => alert.remove(), 200);
       });
     }, 3000);
+
+    // ==========================================
+    // 2. LOGIC KHÓA VAN 1 CHIỀU CHO TRẠNG THÁI ĐƠN HÀNG
+    // ==========================================
+    const statusSelect = document.getElementById('status');
+    const options = statusSelect.options;
+
+    // Định nghĩa cấp bậc của từng trạng thái
+    const statusRank = {
+      "Chờ xử lý": 1,
+      "Đã xác nhận": 2,
+      "Thành công": 3,
+      "Đã hủy": 4 // Đã hủy là chốt hạ, không thể đổi sang cái khác
+    };
+
+    // Lấy trạng thái hiện tại lúc vừa load trang (trạng thái đã lưu trong DB)
+    const currentStatus = "${order.orderStatus}";
+    const currentRank = statusRank[currentStatus] || 0;
+
+    // Lặp qua tất cả các lựa chọn
+    for (let i = 0; i < options.length; i++) {
+      let optRank = statusRank[options[i].value] || 0;
+
+      // NẾU TÙY CHỌN CÓ CẤP BẬC NHỎ HƠN HIỆN TẠI -> VÔ HIỆU HÓA (XÁM ĐI)
+      if (optRank < currentRank) {
+        options[i].disabled = true;
+      }
+
+      // Nếu trạng thái hiện tại là "Thành công" hoặc "Đã hủy" -> Khóa chết thẻ Select
+      if (currentStatus === "Thành công" || currentStatus === "Đã hủy") {
+        statusSelect.style.pointerEvents = "none";
+        statusSelect.style.backgroundColor = "#e9ecef"; // Đổi màu nền cho giống ô readonly
+        document.querySelector(".btn-update").style.display = "none"; // Ẩn luôn nút Cập nhật
+      }
+    }
   });
 </script>
 </body>

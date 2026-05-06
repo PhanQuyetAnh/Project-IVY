@@ -36,14 +36,14 @@ public class ChatBotService {
             // 1. Lấy dữ liệu sản phẩm từ database nếu user hỏi về sản phẩm
             String productContext = getProductDataIfRelevant(userMessage);
 
-            // 2. Xây dựng JSON request body (kèm dữ liệu sản phẩm nếu có)
-            String jsonBody = buildJsonRequest(userMessage, productContext);
+            // 2. Xây dựng JSON request body cho Gemini (kèm dữ liệu sản phẩm nếu có)
+            String jsonBody = buildGeminiJsonRequest(userMessage, productContext);
 
             // 3. Tạo HTTP Request
-            URL url = new URL(ChatBotConfig.OPENAI_API_URL);
+            String apiUrl = ChatBotConfig.GEMINI_API_URL + "?key=" + ChatBotConfig.getApiKey();
+            URL url = new URL(apiUrl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
-            conn.setRequestProperty("Authorization", "Bearer " + ChatBotConfig.getApiKey());
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setDoOutput(true);
             conn.setConnectTimeout(30000);
@@ -59,14 +59,14 @@ public class ChatBotService {
             int responseCode = conn.getResponseCode();
             if (responseCode != 200) {
                 String errorMsg = readStream(conn.getErrorStream());
-                return "❌ Lỗi API: " + responseCode + " - " + errorMsg;
+                return "❌ Lỗi API Gemini: " + responseCode + " - " + errorMsg;
             }
 
             // 6. Đọc response body
             String responseBody = readStream(conn.getInputStream());
 
-            // 7. Parse JSON response (String-based, không dùng external lib)
-            String botMessage = extractMessageFromJson(responseBody);
+            // 7. Parse JSON response từ Gemini
+            String botMessage = extractMessageFromGeminiJson(responseBody);
 
             return botMessage;
 
@@ -153,6 +153,34 @@ public class ChatBotService {
     private static List<ProductObject> findRelevantProducts(String userMessage, List<ProductObject> allProducts) {
         List<ProductObject> relevantProducts = new ArrayList<>();
         String messageLower = userMessage.toLowerCase();
+
+        // ===== TRUY VẤN ĐẶC BIỆT: Sản phẩm bán chạy, giá cao/thấp =====
+
+        // 1. Sản phẩm bán chạy nhất (có số lượng còn cao nhất = đã bán chạy)
+        if (messageLower.contains("bán chạy") || messageLower.contains("phổ biến") ||
+            messageLower.contains("bán đắt") || messageLower.contains("top bán")) {
+            List<ProductObject> topSelling = new ArrayList<>(allProducts);
+            topSelling.sort((p1, p2) -> Integer.compare(p2.getProductQuantity(), p1.getProductQuantity()));
+            return topSelling.subList(0, Math.min(5, topSelling.size()));
+        }
+
+        // 2. Sản phẩm giá cao nhất
+        if (messageLower.contains("giá cao nhất") || messageLower.contains("đắt nhất") ||
+            messageLower.contains("giá cao") || messageLower.contains("cao cấp")) {
+            List<ProductObject> topPrice = new ArrayList<>(allProducts);
+            topPrice.sort((p1, p2) -> Double.compare(p2.getProductPrice(), p1.getProductPrice()));
+            return topPrice.subList(0, Math.min(5, topPrice.size()));
+        }
+
+        // 3. Sản phẩm giá thấp nhất
+        if (messageLower.contains("giá thấp nhất") || messageLower.contains("rẻ nhất") ||
+            messageLower.contains("giá rẻ") || messageLower.contains("bé nhất")) {
+            List<ProductObject> lowestPrice = new ArrayList<>(allProducts);
+            lowestPrice.sort((p1, p2) -> Double.compare(p1.getProductPrice(), p2.getProductPrice()));
+            return lowestPrice.subList(0, Math.min(5, lowestPrice.size()));
+        }
+
+        // ===== TÌM KIẾM BÌNH THƯỜNG DỰA TRÊN NGỮ CẢNH =====
 
         // Phân tích ngữ cảnh từ câu hỏi
         boolean isFormalEvent = messageLower.contains("tiệc") || messageLower.contains("formal") ||
@@ -278,34 +306,29 @@ public class ChatBotService {
     }
 
     /**
-     * Xây dựng JSON request body dạng String
-     * Thêm thông tin sản phẩm từ database vào context nếu user hỏi về sản phẩm
+     * Xây dựng JSON request body cho Gemini text:generateText endpoint
+     * Format: { "prompt": { "text": "..." } }
      */
-    private static String buildJsonRequest(String userMessage, String productContext) {
-        // Escape quotes và newlines trong message
-        String escapedMessage = escapeJson(userMessage);
-        String escapedSystemPrompt = escapeJson(ChatBotConfig.SYSTEM_PROMPT);
+    private static String buildGeminiJsonRequest(String userMessage, String productContext) {
+        String systemPrompt = ChatBotConfig.SYSTEM_PROMPT;
 
         // Nếu có dữ liệu sản phẩm, thêm vào system prompt
         if (productContext != null && !productContext.isEmpty()) {
-            escapedSystemPrompt = escapeJson(ChatBotConfig.SYSTEM_PROMPT + productContext +
-                    "\n\nHãy sử dụng thông tin sản phẩm trên để trả lời câu hỏi của khách hàng một cách cụ thể và chính xác. Luôn nhắc đến Tên sản phẩm và Mã SP khi gợi ý.");
+            systemPrompt = systemPrompt + productContext +
+                    "\n\nHãy sử dụng thông tin sản phẩm trên để trả lời câu hỏi của khách hàng một cách cụ thể và chính xác. Luôn nhắc đến Tên sản phẩm và Mã SP khi gợi ý.";
         }
 
+        // Kết hợp system prompt và user message
+        String combinedContent = systemPrompt + "\n\nCâu hỏi của khách hàng: " + userMessage;
+        String escapedContent = escapeJson(combinedContent);
+
+        // Format cho text:generateText endpoint
         return "{"
-                + "\"model\":\"" + ChatBotConfig.CHATBOT_MODEL + "\","
-                + "\"temperature\":" + ChatBotConfig.CHATBOT_TEMPERATURE + ","
-                + "\"max_tokens\":" + ChatBotConfig.CHATBOT_MAX_TOKENS + ","
-                + "\"messages\":["
-                + "{"
-                + "\"role\":\"system\","
-                + "\"content\":\"" + escapedSystemPrompt + "\""
+                + "\"prompt\":{"
+                + "\"text\":\"" + escapedContent + "\""
                 + "},"
-                + "{"
-                + "\"role\":\"user\","
-                + "\"content\":\"" + escapedMessage + "\""
-                + "}"
-                + "]"
+                + "\"temperature\":" + ChatBotConfig.CHATBOT_TEMPERATURE + ","
+                + "\"maxOutputTokens\":" + ChatBotConfig.CHATBOT_MAX_TOKENS
                 + "}";
     }
 
@@ -339,34 +362,42 @@ public class ChatBotService {
     }
 
     /**
-     * Extract message từ OpenAI JSON response (String-based parsing)
-     * JSON format: { "choices": [{ "message": { "content": "..." } }] }
+     * Extract message từ Gemini API text:generateText response
+     * JSON format: { "candidates": [{ "output": "..." }] }
      */
-    private static String extractMessageFromJson(String jsonResponse) {
+    private static String extractMessageFromGeminiJson(String jsonResponse) {
         try {
-            // Tìm vị trí của "content" key
-            int contentIndex = jsonResponse.indexOf("\"content\":");
-            if (contentIndex == -1) {
-                return "❌ Lỗi: Không tìm thấy content trong response";
+            // Tìm vị trí của "output" key (đây là response format của text:generateText)
+            int outputIndex = jsonResponse.indexOf("\"output\":");
+            if (outputIndex == -1) {
+                // Thử tìm "text" field (fallback)
+                outputIndex = jsonResponse.indexOf("\"text\":");
+                if (outputIndex == -1) {
+                    return "❌ Lỗi: Không tìm thấy output trong response từ Gemini";
+                }
+                outputIndex += 6; // length of "text":
+            } else {
+                outputIndex += 9; // length of "output":
             }
 
-            // Tìm quote đầu tiên sau "content":
-            int firstQuote = jsonResponse.indexOf("\"", contentIndex + 10);
+            // Tìm quote đầu tiên sau "output":
+            int firstQuote = jsonResponse.indexOf("\"", outputIndex);
             if (firstQuote == -1) {
-                return "❌ Lỗi: Format response không hợp lệ";
+                return "❌ Lỗi: Format response từ Gemini không hợp lệ";
             }
 
             // Tìm quote kết thúc (xử lý escaped quotes)
             int lastQuote = firstQuote + 1;
             while (lastQuote < jsonResponse.length()) {
-                if (jsonResponse.charAt(lastQuote) == '"' && jsonResponse.charAt(lastQuote - 1) != '\\') {
+                if (jsonResponse.charAt(lastQuote) == '"' &&
+                    (lastQuote == 0 || jsonResponse.charAt(lastQuote - 1) != '\\')) {
                     break;
                 }
                 lastQuote++;
             }
 
             if (lastQuote >= jsonResponse.length()) {
-                return "❌ Lỗi: Không tìm thấy end quote trong response";
+                return "❌ Lỗi: Không tìm thấy end quote trong response từ Gemini";
             }
 
             // Extract message
@@ -380,11 +411,12 @@ public class ChatBotService {
                     .replace("\\\"", "\"")
                     .replace("\\\\", "\\");
 
-            return message;
+            return message.trim();
 
         } catch (Exception e) {
-            System.err.println("Error parsing JSON response: " + e.getMessage());
-            return "❌ Lỗi khi xử lý response từ API";
+            System.err.println("Error parsing Gemini JSON response: " + e.getMessage());
+            e.printStackTrace();
+            return "❌ Lỗi khi xử lý response từ Gemini API";
         }
     }
 }

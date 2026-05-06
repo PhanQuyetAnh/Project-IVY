@@ -16,17 +16,17 @@ public class ChatBotConfig {
 
     private static final Map<String, String> envProperties = loadEnv();
 
-    // OpenAI Configuration - Lấy giá trị từ file .env.
+    // Gemini Configuration - Lấy giá trị từ file .env.
     // GIÁ TRỊ MẶC ĐỊNH ĐỂ TRỐNG ĐỂ ĐẢM BẢO BẢO MẬT KHI PUSH LÊN GITHUB.
-    public static final String OPENAI_API_KEY = getEnv("OPENAI_API_KEY", "");
-    public static final String CHATBOT_MODEL = getEnv("CHATBOT_MODEL", "gpt-3.5-turbo");
+    public static final String GEMINI_API_KEY = getEnv("GEMINI_API_KEY", "");
+    public static final String CHATBOT_MODEL = getEnv("CHATBOT_MODEL", "gemini-pro");
     public static final double CHATBOT_TEMPERATURE =
             Double.parseDouble(getEnv("CHATBOT_TEMPERATURE", "0.7"));
     public static final int CHATBOT_MAX_TOKENS =
             Integer.parseInt(getEnv("CHATBOT_MAX_TOKENS", "500"));
 
-    // OpenAI API Endpoint
-    public static final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+    // Gemini API Endpoint - Dùng API REST endpoint chính xác (không dùng v1 hay v1beta)
+    public static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/text:generateText";
 
     // System Prompt cho ChatBot
     public static final String SYSTEM_PROMPT = """
@@ -138,10 +138,10 @@ public class ChatBotConfig {
     }
 
     public static boolean isConfigured() {
-        return OPENAI_API_KEY != null && !OPENAI_API_KEY.isEmpty();
+        return GEMINI_API_KEY != null && !GEMINI_API_KEY.isEmpty();
     }
 
     public static String getApiKey() {
-        return OPENAI_API_KEY;
+        return GEMINI_API_KEY;
     }
 }
