@@ -15,7 +15,7 @@ public class ChatBotConfig {
 
     private static final Map<String, String> envProperties = loadEnv();
 
-    public static final String GEMINI_API_KEY = getEnv("GEMINI_API_KEY", "AIzaSyBIdGjVW7OZsy9au7rFbYMicJ83wNymOC8");
+    public static final String GEMINI_API_KEY = getEnv("GEMINI_API_KEY", "");
     public static final String CHATBOT_MODEL = "gemini-2.5-flash";
     public static final double CHATBOT_TEMPERATURE =
             Double.parseDouble(getEnv("CHATBOT_TEMPERATURE", "0.7"));
