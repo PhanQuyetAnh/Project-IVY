@@ -1,8 +1,9 @@
 package service;
 
 import util.ChatBotConfig;
-import util.ProductSearchHelper;
 import dao.Impl.ProductImpl;
+import dao.Impl.TopSellingImpl;
+import model.TopSellingProduct;
 import model.ProductObject;
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -10,36 +11,29 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 /**
- * ChatBotService - Xử lý giao tiếp với OpenAI API
- * Gửi tin nhắn của user đến GPT-3.5 và trả về response
- * Tích hợp: Lấy dữ liệu sản phẩm từ database để trả lời chính xác
+ * ChatBotService - Xử lý giao tiếp với Gemini API
+ * Sử dụng Thuật toán: Phân tích ý định người dùng (Intent-based Search) & Lọc đa luồng (Multi-filter)
  */
 public class ChatBotService {
 
     /**
-     * Gửi tin nhắn đến OpenAI GPT-3.5 và nhận response
-     * Nếu user hỏi về sản phẩm, trước tiên sẽ lấy dữ liệu từ database
-     *
-     * @param userMessage - Tin nhắn từ người dùng
-     * @return Response từ chatbot
-     * @throws IOException - Nếu có lỗi khi gọi API
+     * 1. HÀM GIAO TIẾP VỚI API GEMINI (Giữ nguyên cấu trúc, thêm xử lý lỗi mượt hơn)
      */
     public static String getChatResponse(String userMessage) throws IOException {
-        // Kiểm tra API Key
         if (!ChatBotConfig.isConfigured()) {
             return "❌ Chatbot chưa được cấu hình. Vui lòng kiểm tra API Key.";
         }
 
         try {
-            // 1. Lấy dữ liệu sản phẩm từ database nếu user hỏi về sản phẩm
-            String productContext = getProductDataIfRelevant(userMessage);
+            // Lấy dữ liệu sản phẩm từ DB đã qua lưới lọc
+            String productContext = getProductContext(userMessage);
 
-            // 2. Xây dựng JSON request body cho Gemini (kèm dữ liệu sản phẩm nếu có)
+            // Gói vào JSON gửi đi
             String jsonBody = buildGeminiJsonRequest(userMessage, productContext);
 
-            // 3. Tạo HTTP Request
             String apiUrl = ChatBotConfig.GEMINI_API_URL + "?key=" + ChatBotConfig.getApiKey();
             URL url = new URL(apiUrl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -49,374 +43,290 @@ public class ChatBotService {
             conn.setConnectTimeout(30000);
             conn.setReadTimeout(60000);
 
-            // 4. Gửi request body
             try (OutputStream os = conn.getOutputStream()) {
                 byte[] input = jsonBody.getBytes(StandardCharsets.UTF_8);
                 os.write(input, 0, input.length);
             }
 
-            // 5. Kiểm tra response code
             int responseCode = conn.getResponseCode();
             if (responseCode != 200) {
-                String errorMsg = readStream(conn.getErrorStream());
-                return "❌ Lỗi API Gemini: " + responseCode + " - " + errorMsg;
+                if (responseCode == 503) {
+                    return "Hệ thống AI đang quá tải cục bộ. Quý khách vui lòng hỏi lại sau vài giây nhé!";
+                }
+                // THÊM ĐOẠN NÀY DÀNH CHO LỖI 429
+                if (responseCode == 429) {
+                    return "Hệ thống tư vấn đang nhận quá nhiều câu hỏi cùng lúc. Bạn vui lòng chờ khoảng 1 phút rồi hỏi lại mình nhé!";
+                }
+                return "❌ Lỗi kết nối AI (" + responseCode + "). Vui lòng thử lại sau.";
             }
 
-            // 6. Đọc response body
-            String responseBody = readStream(conn.getInputStream());
-
-            // 7. Parse JSON response từ Gemini
-            String botMessage = extractMessageFromGeminiJson(responseBody);
-
-            return botMessage;
+            return extractMessageFromGeminiJson(readStream(conn.getInputStream()));
 
         } catch (Exception e) {
-            System.err.println("ChatBot Error: " + e.getMessage());
             e.printStackTrace();
-            return "❌ Lỗi: " + e.getMessage();
+            return "❌ Đã xảy ra lỗi hệ thống khi xử lý AI, vui lòng thử lại.";
         }
     }
 
     /**
-     * Lấy dữ liệu sản phẩm từ database nếu user hỏi về sản phẩm
-     * Sử dụng Smart Search: tìm kiếm dựa trên:
-     * - Từ khóa trực tiếp (tên sản phẩm, màu, size)
-     * - Ngữ cảnh (buổi tiệc, đi chơi, đi làm) → tìm sản phẩm phù hợp
-     * - Mô tả sản phẩm (productDescription) để gợi ý chính xác
+     * 2. HÀM TẠO NGỮ CẢNH (CONTEXT) CHO AI
+     * Chức năng: Đọc Database, lọc sản phẩm và "ép" AI phải nghe theo dữ liệu này
      */
-    private static String getProductDataIfRelevant(String userMessage) {
+    private static String getProductContext(String userMessage) {
         try {
-            String messageLower = userMessage.toLowerCase();
-
-            // Danh sách từ khóa liên quan đến sản phẩm
-            String[] productKeywords = {
-                    "sản phẩm", "áo", "quần", "váy", "giá", "mua", "bao nhiêu",
-                    "có", "gì", "giống", "màu", "size", "kích", "loại", "hàng",
-                    "hãy gợi ý", "tìm", "nào", "tiệc", "đi chơi", "đi làm",
-                    "hẹn hò", "dạo phố", "du lịch", "công sở", "casual", "formal",
-                    "phù hợp", "thích hợp", "phần", "mặc", "đi", "mới"
-            };
-
-            boolean isProductRelated = false;
-            for (String keyword : productKeywords) {
-                if (messageLower.contains(keyword)) {
-                    isProductRelated = true;
-                    break;
-                }
-            }
-
-            if (!isProductRelated) {
-                return "";
-            }
-
-            // Lấy danh sách sản phẩm từ database
             ProductImpl productDAO = new ProductImpl();
             List<ProductObject> allProducts = productDAO.getAllProducts();
 
-            if (allProducts == null || allProducts.isEmpty()) {
-                return "";
+            if (allProducts == null || allProducts.isEmpty()) return "";
+
+            // Gọi hàm não bộ để lọc
+            List<ProductObject> matchedProducts = analyzeIntentAndFilter(userMessage.toLowerCase(), allProducts);
+
+            StringBuilder contextBuilder = new StringBuilder();
+
+            //  ÉP AI CHẤP NHẬN DỮ LIỆU BÁN CHẠY
+            if (userMessage.toLowerCase().contains("bán chạy") || userMessage.toLowerCase().contains("hot")) {
+                contextBuilder.append("\n[LỆNH HỆ THỐNG]: Danh sách dưới đây ĐÃ LÀ CÁC SẢN PHẨM BÁN CHẠY NHẤT ĐƯỢC LẤY TỪ HỆ THỐNG THỐNG KÊ DOANH THU. BẠN PHẢI DÙNG DỮ LIỆU NÀY ĐỂ TRẢ LỜI, KHÔNG ĐƯỢC NÓI LÀ KHÔNG CÓ THỐNG KÊ.\n");
             }
 
-            // Tìm sản phẩm liên quan dựa trên từ khóa và ngữ cảnh
-            List<ProductObject> matchedProducts = findRelevantProducts(userMessage, allProducts);
-
-            // Xây dựng thông tin sản phẩm để trả về
-            StringBuilder productInfo = new StringBuilder();
-            productInfo.append("\n\n[THÔNG TIN SẢN PHẨM TỪ HỆ THỐNG - PHÙ HỢP VỚI YÊU CẦU]:\n");
+            contextBuilder.append("\n[DỮ LIỆU SẢN PHẨM KHỚP VỚI YÊU CẦU]:\n");
 
             if (matchedProducts.isEmpty()) {
-                // Nếu không tìm được sản phẩm cụ thể, trả về 5 sản phẩm phổ biến đầu tiên
-                productInfo.append("(Hiển thị sản phẩm phổ biến)\n");
-                for (int i = 0; i < Math.min(5, allProducts.size()); i++) {
-                    productInfo.append(formatProductInfo(allProducts.get(i)));
-                }
-            } else {
-                // Trả về sản phẩm phù hợp (max 5 sản phẩm)
-                for (int i = 0; i < Math.min(5, matchedProducts.size()); i++) {
-                    productInfo.append(formatProductInfo(matchedProducts.get(i)));
-                }
+                // Rút dự phòng: Lấy 5 sản phẩm mới nhất nếu không tìm ra
+                matchedProducts = allProducts;
+                matchedProducts.sort((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt()));
+                contextBuilder.append("(Không tìm thấy chính xác, dùng danh sách hàng mới nhất thay thế)\n");
             }
 
-            return productInfo.toString();
+            // Chỉ gửi top 5 để tiết kiệm Token và tránh cắt ngang câu
+            for (int i = 0; i < Math.min(5, matchedProducts.size()); i++) {
+                contextBuilder.append(formatProductInfo(matchedProducts.get(i)));
+            }
+
+            return contextBuilder.toString();
 
         } catch (Exception e) {
-            System.err.println("Error getting product data: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Error context: " + e.getMessage());
             return "";
         }
     }
 
     /**
-     * Tìm sản phẩm phù hợp với yêu cầu của user
-     * Sử dụng phân tích ngữ cảnh (context analysis) để gợi ý chính xác
+     * 3. HÀM NÃO BỘ LỌC DỮ LIỆU (INTENT ANALYSIS)
+     * Chức năng: Chạy qua các lớp lưới lọc dựa trên từ khóa khách gõ
      */
-    private static List<ProductObject> findRelevantProducts(String userMessage, List<ProductObject> allProducts) {
-        List<ProductObject> relevantProducts = new ArrayList<>();
-        String messageLower = userMessage.toLowerCase();
+    private static List<ProductObject> analyzeIntentAndFilter(String msg, List<ProductObject> list) {
+        List<ProductObject> result = new ArrayList<>(list);
 
-        // ===== TRUY VẤN ĐẶC BIỆT: Sản phẩm bán chạy, giá cao/thấp =====
+        // 3.1. Lọc theo Loại (Đầm, Váy, Áo...)
+        result = filterByCategory(msg, result);
 
-        // 1. Sản phẩm bán chạy nhất (có số lượng còn cao nhất = đã bán chạy)
-        if (messageLower.contains("bán chạy") || messageLower.contains("phổ biến") ||
-            messageLower.contains("bán đắt") || messageLower.contains("top bán")) {
-            List<ProductObject> topSelling = new ArrayList<>(allProducts);
-            topSelling.sort((p1, p2) -> Integer.compare(p2.getProductQuantity(), p1.getProductQuantity()));
-            return topSelling.subList(0, Math.min(5, topSelling.size()));
+        // 3.2. Lọc theo Giá (Dưới 1 triệu, 800k...)
+        result = filterByPrice(msg, result);
+
+        // 3.3. Lọc theo Màu sắc (Đỏ, Đen, Trắng...)
+        result = filterByColor(msg, result);
+
+        // 3.4. Lọc Sản phẩm Khuyến mãi (Sale)
+        if (msg.contains("sale") || msg.contains("giảm giá") || msg.contains("khuyến mãi")) {
+            result = result.stream().filter(p -> p.getDiscountPercent() > 0).collect(Collectors.toList());
         }
 
-        // 2. Sản phẩm giá cao nhất
-        if (messageLower.contains("giá cao nhất") || messageLower.contains("đắt nhất") ||
-            messageLower.contains("giá cao") || messageLower.contains("cao cấp")) {
-            List<ProductObject> topPrice = new ArrayList<>(allProducts);
-            topPrice.sort((p1, p2) -> Double.compare(p2.getProductPrice(), p1.getProductPrice()));
-            return topPrice.subList(0, Math.min(5, topPrice.size()));
-        }
+        // 3.5. Sắp xếp (Sort) theo Mới/Cũ/Giá/Bán chạy
+        result = sortByIntent(msg, result);
 
-        // 3. Sản phẩm giá thấp nhất
-        if (messageLower.contains("giá thấp nhất") || messageLower.contains("rẻ nhất") ||
-            messageLower.contains("giá rẻ") || messageLower.contains("bé nhất")) {
-            List<ProductObject> lowestPrice = new ArrayList<>(allProducts);
-            lowestPrice.sort((p1, p2) -> Double.compare(p1.getProductPrice(), p2.getProductPrice()));
-            return lowestPrice.subList(0, Math.min(5, lowestPrice.size()));
-        }
-
-        // ===== TÌM KIẾM BÌNH THƯỜNG DỰA TRÊN NGỮ CẢNH =====
-
-        // Phân tích ngữ cảnh từ câu hỏi
-        boolean isFormalEvent = messageLower.contains("tiệc") || messageLower.contains("formal") ||
-                messageLower.contains("công sở") || messageLower.contains("chính thức");
-        boolean isCasual = messageLower.contains("casual") || messageLower.contains("thoải mái") ||
-                messageLower.contains("đi chơi") || messageLower.contains("dạo phố");
-        boolean isDate = messageLower.contains("hẹn hò") || messageLower.contains("hẹn") ||
-                messageLower.contains("tình yêu");
-        boolean isTravel = messageLower.contains("du lịch") || messageLower.contains("đi du") ||
-                messageLower.contains("chuyến đi");
-
-        // Tìm sản phẩm dựa trên từ khóa trực tiếp
-        for (ProductObject product : allProducts) {
-            String productName = product.getProductName() != null ? product.getProductName().toLowerCase() : "";
-            String description = product.getProductDescription() != null ? product.getProductDescription().toLowerCase() : "";
-            String color = product.getProductColor() != null ? product.getProductColor().toLowerCase() : "";
-
-            int relevanceScore = 0;
-
-            // 1. Kiểm tra từ khóa trực tiếp
-            if (productName.contains(messageLower) || messageLower.contains(productName)) {
-                relevanceScore += 100;
-            }
-            if (color.contains(messageLower) || messageLower.contains(color)) {
-                relevanceScore += 50;
-            }
-
-            // 2. Kiểm tra ngữ cảnh dựa trên mô tả sản phẩm
-            if (isFormalEvent) {
-                if (description.contains("trang trọng") || description.contains("formal") ||
-                        description.contains("công sở") || description.contains("sang trọng") ||
-                        description.contains("lịch sự")) {
-                    relevanceScore += 80;
-                }
-                // Chuyển sang check category bằng Tên sản phẩm
-                if (productName.contains("váy") || productName.contains("áo") || productName.contains("quần tây") || productName.contains("sơ mi")) {
-                    relevanceScore += 30;
-                }
-            }
-
-            if (isCasual) {
-                if (description.contains("casual") || description.contains("thoải mái") ||
-                        description.contains("thường ngày") || description.contains("năng động")) {
-                    relevanceScore += 80;
-                }
-                if (productName.contains("áo thun") || productName.contains("jean") || productName.contains("quần đùi")) {
-                    relevanceScore += 30;
-                }
-            }
-
-            if (isDate) {
-                if (description.contains("duyên dáng") || description.contains("quyến rũ") ||
-                        description.contains("xinh xắn") || description.contains("cổ điển")) {
-                    relevanceScore += 80;
-                }
-                if (productName.contains("váy") || (productName.contains("áo") && !productName.contains("áo sơ mi"))) {
-                    relevanceScore += 30;
-                }
-            }
-
-            if (isTravel) {
-                if (description.contains("thoải mái") || description.contains("nhẹ") ||
-                        description.contains("thực dụng") || description.contains("du lịch")) {
-                    relevanceScore += 80;
-                }
-                if (productName.contains("áo") || productName.contains("quần") || productName.contains("váy")) {
-                    relevanceScore += 30;
-                }
-            }
-
-            // 3. Nếu có điểm số, thêm vào danh sách
-            if (relevanceScore > 0) {
-                // Lưu trữ điểm số tạm thời
-                product.setAverageRating((double) relevanceScore); // Tái sử dụng field này để lưu score
-                relevantProducts.add(product);
-            }
-        }
-
-        // Sắp xếp sản phẩm theo điểm số (cao nhất trước)
-        relevantProducts.sort((p1, p2) -> Double.compare(p2.getAverageRating(), p1.getAverageRating()));
-
-        return relevantProducts;
+        return result;
     }
 
     /**
-     * Format thông tin sản phẩm thành chuỗi dễ đọc
-     * Bao gồm: ID, Tên, Giá, Màu, Size, Mô tả, Số lượng
+     * 4. CÁC HÀM LƯỚI LỌC CHI TIẾT
      */
-    private static String formatProductInfo(ProductObject product) {
-        StringBuilder info = new StringBuilder();
-        info.append("🛍️ [Mã SP: ").append(product.getProductCode()).append("] ");
-        info.append(product.getProductName());
+    private static List<ProductObject> filterByCategory(String msg, List<ProductObject> list) {
+        String[] types = {"áo", "quần", "váy", "đầm", "chân váy", "sơ mi", "thun", "dạ hội", "công sở"};
+        boolean hasCategoryIntent = false;
 
-        if (product.getProductColor() != null && !product.getProductColor().isEmpty()) {
-            info.append(" (Màu: ").append(product.getProductColor()).append(")");
+        for (String type : types) {
+            if (msg.contains(type)) { hasCategoryIntent = true; break; }
         }
 
-        info.append("\n   💰 Giá: ").append(String.format("%.0f VNĐ", product.getProductPrice()));
+        if (!hasCategoryIntent) return list;
 
-        if (product.getProductSize() != null && !product.getProductSize().isEmpty()) {
-            info.append(" | Size: ").append(product.getProductSize());
-        }
+        return list.stream().filter(p -> {
+            String name = p.getProductName() != null ? p.getProductName().toLowerCase() : "";
+            String cat = p.getCategoryName() != null ? p.getCategoryName().toLowerCase() : "";
+            String desc = p.getProductDescription() != null ? p.getProductDescription().toLowerCase() : "";
 
-        if (product.getProductQuantity() > 0) {
-            info.append(" | Còn: ").append(product.getProductQuantity()).append(" sp");
-        } else {
-            info.append(" | Hết hàng");
-        }
-
-        if (product.getProductDescription() != null && !product.getProductDescription().isEmpty()) {
-            String description = product.getProductDescription();
-            // Lọc bỏ thẻ HTML để AI dễ đọc hơn
-            description = description.replaceAll("<[^>]*>", "");
-            // Cắt ngắn nếu quá dài
-            if (description.length() > 150) {
-                description = description.substring(0, 150) + "...";
+            for (String type : types) {
+                if (msg.contains(type) && (name.contains(type) || cat.contains(type) || desc.contains(type))) {
+                    return true;
+                }
             }
-            info.append("\n   📝 Mô tả: ").append(description);
+            return false;
+        }).collect(Collectors.toList());
+    }
+
+    private static List<ProductObject> filterByPrice(String msg, List<ProductObject> list) {
+        double maxPrice = Double.MAX_VALUE;
+        double minPrice = 0;
+
+        // Xử lý giá tiền Việt Nam
+        if (msg.contains("dưới 500") || msg.contains("tầm 500")) maxPrice = 550000;
+        else if (msg.contains("tầm 800") || msg.contains("dưới 800")) { minPrice = 600000; maxPrice = 900000; }
+        else if (msg.contains("dưới 1 triệu") || msg.contains("dưới 1 củ")) maxPrice = 1000000;
+        else if (msg.contains("dưới 2 triệu")) maxPrice = 2000000;
+        else if (msg.contains("trên 1 triệu")) minPrice = 1000000;
+
+        final double min = minPrice;
+        final double max = maxPrice;
+
+        if (min == 0 && max == Double.MAX_VALUE) return list;
+
+        return list.stream().filter(p -> {
+            double finalPrice = p.getProductPrice() * (100 - p.getDiscountPercent()) / 100;
+            return finalPrice >= min && finalPrice <= max;
+        }).collect(Collectors.toList());
+    }
+
+    private static List<ProductObject> filterByColor(String msg, List<ProductObject> list) {
+        String[] colors = {"đen", "trắng", "đỏ", "vàng", "xanh", "hồng", "tím", "cam", "nâu", "be"};
+        String requestedColor = null;
+
+        for (String c : colors) {
+            if (msg.contains("màu " + c) || msg.contains(c)) { requestedColor = c; break; }
+        }
+        if (requestedColor == null) return list;
+
+        final String rc = requestedColor;
+        return list.stream()
+                .filter(p -> p.getProductColor() != null && p.getProductColor().toLowerCase().contains(rc))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 5. HÀM SẮP XẾP (SORTING)
+     * Chức năng: Đưa sản phẩm phù hợp nhất lên Top 1 để AI thấy
+     */
+    /**
+     * 5. HÀM SẮP XẾP (SORTING) - TÍCH HỢP DỮ LIỆU BÁN CHẠY TỪ ADMIN
+     */
+    private static List<ProductObject> sortByIntent(String msg, List<ProductObject> list) {
+        if (msg.contains("bán chạy") || msg.contains("hot") || msg.contains("nhiều người mua")) {
+            try {
+                TopSellingImpl topDAO = new TopSellingImpl();
+                // Lấy 50 sản phẩm bán chạy nhất từ Database (Bảng OrderDetail)
+                List<TopSellingProduct> topSellers = topDAO.getTopSellingProducts(50, 0);
+
+                // Khớp dữ liệu bán chạy với list sản phẩm hiện tại để lấy đủ thông tin
+                List<ProductObject> realTopSellersList = new ArrayList<>();
+                for (TopSellingProduct top : topSellers) {
+                    for (ProductObject p : list) {
+                        if (p.getProductId() == top.getProductId()) {
+                            realTopSellersList.add(p);
+                            break;
+                        }
+                    }
+                }
+
+                // Nếu lấy được danh sách bán chạy thành công thì trả về luôn
+                if (!realTopSellersList.isEmpty()) {
+                    return realTopSellersList;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        else if (msg.contains("mới nhất") || msg.contains("vừa về") || msg.contains("mới")) {
+            list.sort((p1, p2) -> {
+                if(p1.getCreatedAt() == null || p2.getCreatedAt() == null) return 0;
+                return p2.getCreatedAt().compareTo(p1.getCreatedAt());
+            });
+        }
+        else if (msg.contains("cao nhất") || msg.contains("đắt nhất")) {
+            list.sort((p1, p2) -> Double.compare(p2.getProductPrice(), p1.getProductPrice()));
+        }
+        else if (msg.contains("thấp nhất") || msg.contains("rẻ nhất")) {
+            list.sort((p1, p2) -> Double.compare(p1.getProductPrice(), p2.getProductPrice()));
         }
 
+        return list;
+    }
+
+    /**
+     * 6. CÁC HÀM TIỆN ÍCH CHO AI
+     */
+    private static String formatProductInfo(ProductObject p) {
+        StringBuilder info = new StringBuilder();
+        info.append("🛍️ [Mã SP: ").append(p.getProductCode()).append("] ").append(p.getProductName());
+
+        double originalPrice = p.getProductPrice();
+        if (p.getDiscountPercent() > 0) {
+            double salePrice = originalPrice * (100 - p.getDiscountPercent()) / 100;
+            info.append(" | Giá SALE: ").append(String.format("%.0f VNĐ", salePrice));
+        } else {
+            info.append(" | Giá: ").append(String.format("%.0f VNĐ", originalPrice));
+        }
+
+        if (p.getProductColor() != null) info.append(" | Màu: ").append(p.getProductColor());
+        if (p.getProductDescription() != null) {
+            String desc = p.getProductDescription().replaceAll("<[^>]*>", ""); // Xóa HTML tag
+            info.append(" | Mô tả: ").append(desc.length() > 100 ? desc.substring(0, 100) + "..." : desc);
+        }
         info.append("\n");
         return info.toString();
     }
 
-    /**
-     * Xây dựng JSON request body cho Gemini text:generateText endpoint
-     * Format: { "prompt": { "text": "..." } }
-     */
     private static String buildGeminiJsonRequest(String userMessage, String productContext) {
         String systemPrompt = ChatBotConfig.SYSTEM_PROMPT;
 
-        // Nếu có dữ liệu sản phẩm, thêm vào system prompt
+        // Lệnh BẮT BUỘC để AI không nói dài và không bị đứt đoạn
+        systemPrompt += "\n[QUAN TRỌNG]: Hãy trả lời NGẮN GỌN, SÚC TÍCH. Dừng lại khi đã giới thiệu xong sản phẩm, KHÔNG viết dài dòng để tránh bị cắt ngang câu.";
+
         if (productContext != null && !productContext.isEmpty()) {
-            systemPrompt = systemPrompt + productContext +
-                    "\n\nHãy sử dụng thông tin sản phẩm trên để trả lời câu hỏi của khách hàng một cách cụ thể và chính xác. Luôn nhắc đến Tên sản phẩm và Mã SP khi gợi ý.";
+            systemPrompt += "\n" + productContext;
         }
 
-        // Kết hợp system prompt và user message
-        String combinedContent = systemPrompt + "\n\nCâu hỏi của khách hàng: " + userMessage;
-        String escapedContent = escapeJson(combinedContent);
-
-        // Format cho text:generateText endpoint
+        String escapedContent = escapeJson(systemPrompt + "\n\nKhách hỏi: " + userMessage);
         return "{"
-                + "\"prompt\":{"
-                + "\"text\":\"" + escapedContent + "\""
-                + "},"
-                + "\"temperature\":" + ChatBotConfig.CHATBOT_TEMPERATURE + ","
-                + "\"maxOutputTokens\":" + ChatBotConfig.CHATBOT_MAX_TOKENS
+                + "\"contents\": [{\"parts\": [{\"text\": \"" + escapedContent + "\"}]}],"
+                + "\"generationConfig\": {"
+                + "  \"temperature\": " + ChatBotConfig.CHATBOT_TEMPERATURE + ","
+                + "  \"maxOutputTokens\": 2048" // ÉP CỨNG LIMIT LÊN 2048 Ở ĐÂY ĐỂ TRÁNH LỖI CẮT CHỮ
+                + "}"
                 + "}";
     }
 
-    /**
-     * Escape JSON string (handle quotes, newlines, etc.)
-     */
     private static String escapeJson(String text) {
         if (text == null) return "";
-        return text
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
+        return text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
     }
 
-    /**
-     * Đọc InputStream thành String
-     */
     private static String readStream(InputStream is) throws IOException {
         if (is == null) return "";
-
         StringBuilder sb = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line);
-            }
+            while ((line = br.readLine()) != null) sb.append(line);
         }
         return sb.toString();
     }
 
-    /**
-     * Extract message từ Gemini API text:generateText response
-     * JSON format: { "candidates": [{ "output": "..." }] }
-     */
     private static String extractMessageFromGeminiJson(String jsonResponse) {
         try {
-            // Tìm vị trí của "output" key (đây là response format của text:generateText)
-            int outputIndex = jsonResponse.indexOf("\"output\":");
-            if (outputIndex == -1) {
-                // Thử tìm "text" field (fallback)
-                outputIndex = jsonResponse.indexOf("\"text\":");
-                if (outputIndex == -1) {
-                    return "❌ Lỗi: Không tìm thấy output trong response từ Gemini";
-                }
-                outputIndex += 6; // length of "text":
-            } else {
-                outputIndex += 9; // length of "output":
+            int textKey = jsonResponse.indexOf("\"text\":");
+            if (textKey == -1) return "❌ Lỗi: Không tìm thấy text trả lời";
+
+            int start = jsonResponse.indexOf("\"", textKey + 7);
+            if (start == -1) return "❌ Lỗi: Sai format JSON";
+
+            int end = start + 1;
+            while (end < jsonResponse.length()) {
+                if (jsonResponse.charAt(end) == '"' && jsonResponse.charAt(end - 1) != '\\') break;
+                end++;
             }
 
-            // Tìm quote đầu tiên sau "output":
-            int firstQuote = jsonResponse.indexOf("\"", outputIndex);
-            if (firstQuote == -1) {
-                return "❌ Lỗi: Format response từ Gemini không hợp lệ";
-            }
-
-            // Tìm quote kết thúc (xử lý escaped quotes)
-            int lastQuote = firstQuote + 1;
-            while (lastQuote < jsonResponse.length()) {
-                if (jsonResponse.charAt(lastQuote) == '"' &&
-                    (lastQuote == 0 || jsonResponse.charAt(lastQuote - 1) != '\\')) {
-                    break;
-                }
-                lastQuote++;
-            }
-
-            if (lastQuote >= jsonResponse.length()) {
-                return "❌ Lỗi: Không tìm thấy end quote trong response từ Gemini";
-            }
-
-            // Extract message
-            String message = jsonResponse.substring(firstQuote + 1, lastQuote);
-
-            // Unescape special characters
-            message = message
-                    .replace("\\n", "\n")
-                    .replace("\\r", "\r")
-                    .replace("\\t", "\t")
-                    .replace("\\\"", "\"")
-                    .replace("\\\\", "\\");
-
-            return message.trim();
-
+            return jsonResponse.substring(start + 1, end).replace("\\n", "\n").replace("\\\"", "\"").replace("\\\\", "\\").trim();
         } catch (Exception e) {
-            System.err.println("Error parsing Gemini JSON response: " + e.getMessage());
-            e.printStackTrace();
-            return "❌ Lỗi khi xử lý response từ Gemini API";
+            return "❌ Lỗi xử lý response AI";
         }
     }
 }

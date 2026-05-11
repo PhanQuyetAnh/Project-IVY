@@ -558,15 +558,14 @@ public class ProductImpl implements IProductDAO {
         String sql = "SELECT p.*, c.category_name FROM Product p "
                 + "LEFT JOIN category c ON p.category_id = c.category_id "
                 + "WHERE p.isDeleted = FALSE "
-                + "AND (p.product_code = ? OR p.product_name LIKE ? OR c.category_name LIKE ?) "
+                + "AND (p.product_code LIKE ? OR p.product_name LIKE ? OR c.category_name LIKE ?) "
                 + "ORDER BY p.id DESC";
 
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            // Tham số 1: Khớp chính xác mã sản phẩm
-            ps.setString(1,  keyword);
-            // Tham số 2: Khớp một phần tên sản phẩm (chứa keyword)
+            // Tham số : Khớp một phần tên sản phẩm (chứa keyword)
+            ps.setString(1, "%" + keyword + "%");
             ps.setString(2, "%" + keyword + "%");
             ps.setString(3, "%" + keyword + "%");
 

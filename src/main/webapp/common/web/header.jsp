@@ -405,6 +405,10 @@
       if (window.clearChatHistoryOnLogout) {
         window.clearChatHistoryOnLogout();
       }
+      // 2. CHỐT CHẶN AN TOÀN TRỰC TIẾP (Bảo hiểm 100%)
+      // Tự tay xóa luôn bộ nhớ phòng khi file JS trên bị lỗi mạng không chạy được
+      sessionStorage.removeItem('chatbot_chat_history'); // Xóa dữ liệu mới
+       localStorage.removeItem('chatbot_chat_history');   // Dọn dẹp nốt dữ liệu cũ của ngày hôm trước (nếu còn kẹt)
       window.location.href = '${pageContext.request.contextPath}/logout';
     }
   }

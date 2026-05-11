@@ -3,6 +3,7 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@page import="model.UserObject"%>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -131,7 +132,9 @@
                                 <p>XL</p>
                                 <p>XXL</p>
                             </div>
-                            <p class="check-size"><i class=" fa-solid fa-ruler"></i>Kiểm tra size của bạn</p>
+                            <p class="check-size" onclick="openSizeModal()" style="cursor: pointer;">
+                                <i class="fa-solid fa-ruler"></i> Kiểm tra size của bạn
+                            </p>
                         </div>
 
                             <%-- LOGIC KIỂM SOÁT SỐ LƯỢNG TỒN KHO TRÊN UI --%>
@@ -489,5 +492,6 @@
     });
 </script>
 
+    <jsp:include page="size.jsp" />
 </body>
 </html>

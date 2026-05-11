@@ -1,7 +1,7 @@
 /**
  * chatbot.js - Logic JavaScript cho ChatBot Widget
  * Xử lý: Toggle show/hide, Gửi tin nhắn, Hiển thị response
- * Lưu lịch sử chat vào localStorage
+ * Lưu lịch sử chat vào sessionStorage (Reset khi đóng trình duyệt)
  */
 
 $(document).ready(function() {
@@ -14,46 +14,45 @@ $(document).ready(function() {
     const $input = $('#chatbot-message-input');
     const $sendBtn = $('#chatbot-send-btn');
 
-    // LocalStorage key để lưu chat history
+    // Key để lưu chat history
     const CHAT_HISTORY_KEY = 'chatbot_chat_history';
 
-    let isLoading = false; // Cờ kiểm tra xem đang chờ response không
+    let isLoading = false;
 
-    // ===== KHỞI ĐỘNG: Load lịch sử chat từ localStorage =====
+    // ===== KHỞI ĐỘNG: Load lịch sử chat từ sessionStorage =====
     loadChatHistory();
 
     // ===== EVENT: Click nút Toggle (Mở/Đóng ChatBot) =====
     $toggleBtn.on('click', function() {
-        $chatWidget.addClass('active');  // ← Thêm class .active để hiển thị
-        $toggleBtn.addClass('hidden');   // ← Ẩn nút toggle
-        $input.focus(); // Tự động focus vào input
+        $chatWidget.addClass('active');
+        $toggleBtn.addClass('hidden');
+        $input.focus();
     });
 
     // ===== EVENT: Click nút Close (Đóng ChatBot) =====
     $closeBtn.on('click', function() {
-        $chatWidget.removeClass('active');  // ← Xóa class .active để ẩn
-        $toggleBtn.removeClass('hidden');   // ← Hiển thị lại nút toggle
+        $chatWidget.removeClass('active');
+        $toggleBtn.removeClass('hidden');
     });
 
     // ===== EVENT: Click nút Send hoặc nhấn Enter =====
     $sendBtn.on('click', sendMessage);
     $input.on('keypress', function(e) {
-        if (e.which === 13) { // Enter key
+        if (e.which === 13) {
             sendMessage();
         }
     });
 
-    // ===== FUNCTION: Load lịch sử chat từ localStorage =====
+    // ===== FUNCTION: Load lịch sử chat =====
     function loadChatHistory() {
         try {
-            const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY);
+            // ĐÃ SỬA: Dùng sessionStorage thay vì localStorage
+            const savedHistory = sessionStorage.getItem(CHAT_HISTORY_KEY);
             if (savedHistory) {
                 const messages = JSON.parse(savedHistory);
-                // Xóa tin nhắn initial (Xin chào)
                 $messagesContainer.empty();
-                // Restore các tin nhắn cũ
                 messages.forEach(function(msg) {
-                    appendMessage(msg.text, msg.sender, false); // false = không lưu lại (đã lưu)
+                    appendMessage(msg.text, msg.sender, false);
                 });
             }
         } catch(e) {
@@ -61,7 +60,7 @@ $(document).ready(function() {
         }
     }
 
-    // ===== FUNCTION: Lưu tin nhắn vào localStorage =====
+    // ===== FUNCTION: Lưu tin nhắn =====
     function saveChatHistory() {
         try {
             const messages = [];
@@ -70,28 +69,28 @@ $(document).ready(function() {
                 const text = $bubble.text();
                 const sender = $(this).hasClass('user-message') ? 'user' : 'bot';
 
-                // Không lưu loading indicator
                 if (text.trim() && text !== '...' && !text.includes('●')) {
                     messages.push({ text: text, sender: sender });
                 }
             });
-            localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages));
+            // ĐÃ SỬA: Dùng sessionStorage
+            sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages));
         } catch(e) {
             console.error('Error saving chat history:', e);
         }
     }
 
-    // ===== FUNCTION: Xóa lịch sử chat (gọi khi logout) =====
+    // ===== FUNCTION: Xóa lịch sử chat =====
     function clearChatHistory() {
         try {
-            localStorage.removeItem(CHAT_HISTORY_KEY);
+            // ĐÃ SỬA: Dùng sessionStorage
+            sessionStorage.removeItem(CHAT_HISTORY_KEY);
         } catch(e) {
             console.error('Error clearing chat history:', e);
         }
     }
 
     // ===== PUBLIC FUNCTION: Xóa chat history khi logout =====
-    // Gọi hàm này khi user click "Đăng xuất"
     window.clearChatHistoryOnLogout = function() {
         clearChatHistory();
     };
@@ -100,57 +99,34 @@ $(document).ready(function() {
     function sendMessage() {
         const message = $input.val().trim();
 
-        // Kiểm tra tin nhắn không được rỗng
         if (!message || isLoading) {
             return;
         }
 
-        // Hiển thị tin nhắn của user
         appendMessage(message, 'user');
-
-        // Lưu chat history sau khi thêm tin nhắn
         saveChatHistory();
-
-        // Xóa input
         $input.val('');
-
-        // Hiện loading indicator
         showLoading();
 
-        // Gửi AJAX request đến ChatBotController
-        // ⚠️ FIX: Sử dụng đúng URL context path
         var contextPath = $('meta[name="contextPath"]').attr('content') || '/jsp-servlet';
 
         $.ajax({
-            url: contextPath + '/chatbot',  // ← Sử dụng context path động
+            url: contextPath + '/chatbot',
             type: 'POST',
             data: { message: message },
             dataType: 'json',
-            timeout: 30000,  // Timeout 30 giây
+            timeout: 30000,
             success: function(response) {
                 removeLoading();
-
                 if (response.success) {
-                    // Hiển thị response từ bot
                     appendMessage(response.message, 'bot');
                 } else {
                     appendMessage('❌ ' + response.message, 'bot');
                 }
-
-                // Lưu chat history sau khi nhận response
                 saveChatHistory();
             },
             error: function(xhr, status, error) {
                 removeLoading();
-
-                // Debug: In lỗi chi tiết
-                console.error('ChatBot Error:', {
-                    status: status,
-                    error: error,
-                    statusCode: xhr.status,
-                    responseText: xhr.responseText
-                });
-
                 var errorMsg = '❌ Lỗi kết nối';
                 if (status === 'timeout') {
                     errorMsg = '❌ Timeout: Vui lòng kiểm tra kết nối mạng';
@@ -159,7 +135,6 @@ $(document).ready(function() {
                 } else if (xhr.status === 500) {
                     errorMsg = '❌ Lỗi 500: Server error - Kiểm tra logs';
                 }
-
                 appendMessage(errorMsg, 'bot');
             }
         });
@@ -167,7 +142,7 @@ $(document).ready(function() {
         isLoading = true;
     }
 
-    // ===== FUNCTION: Thêm tin nhắn vào messages container =====
+    // ===== CÁC HÀM TIỆN ÍCH GIỮ NGUYÊN =====
     function appendMessage(text, sender) {
         const messageClass = sender === 'user' ? 'user-message' : 'bot-message';
         const messageHTML = `
@@ -175,14 +150,10 @@ $(document).ready(function() {
                 <div class="message-bubble">${escapeHtml(text)}</div>
             </div>
         `;
-
         $messagesContainer.append(messageHTML);
-
-        // Tự động cuộn xuống dưới cùng
         $messagesContainer.scrollTop($messagesContainer[0].scrollHeight);
     }
 
-    // ===== FUNCTION: Hiển thị Loading Indicator =====
     function showLoading() {
         const loadingHTML = `
             <div class="chatbot-message bot-message" id="loading-indicator">
@@ -193,18 +164,15 @@ $(document).ready(function() {
                 </div>
             </div>
         `;
-
         $messagesContainer.append(loadingHTML);
         $messagesContainer.scrollTop($messagesContainer[0].scrollHeight);
     }
 
-    // ===== FUNCTION: Xóa Loading Indicator =====
     function removeLoading() {
         $('#loading-indicator').remove();
         isLoading = false;
     }
 
-    // ===== FUNCTION: Escape HTML để tránh XSS =====
     function escapeHtml(text) {
         const map = {
             '&': '&amp;',
