@@ -25,10 +25,11 @@
           </div>
           <div class="col-md-6 d-flex align-items-center position-relative mb-3">
             <label for="productCode" class="form-label" style="width: 150px;">Mã sản phẩm</label>
-            <input type="text" class="form-control" id="productCode" name="productCode" value="${productCode}" placeholder="31B0156"style="margin-left: 40px;">
+            <input type="text" class="form-control" id="productCode" name="productCode" value="${productCode}" placeholder="31B0156" style="margin-left: 40px;">
             <div class="text-danger small position-absolute" style="top: 100%; left: 162px;" id="error-productCode">${errorProductCode}</div>
           </div>
         </div>
+
         <div class="row mb-3">
           <div class="col-md-6 d-flex align-items-center position-relative mb-3">
             <label for="productPrice" class="form-label" style="width: 150px;">Giá</label>
@@ -49,28 +50,39 @@
             <div class="text-danger small position-absolute" style="top: 100%; left: 162px;" id="error-categoryId">${errorProductCategory}</div>
           </div>
         </div>
+
         <div class="row mb-3">
           <div class="col-md-6 d-flex align-items-center position-relative mb-3">
             <label for="productSize" class="form-label" style="width: 150px;">Kích cỡ</label>
-            <input type="text" class="form-control" id="productSize" name="productSize" value="${productSize}" placeholder="S,M,L" style="margin-left: 40px;">
-            <div class="text-danger small position-absolute" style="top: 100%; left: 162px;" id="error-productSize">${errorProductSize}</div>
+            <div style="flex-grow: 1; margin-left: 40px;">
+              <input type="text" class="form-control" id="productSize" name="productSize"
+                     value="S, M, L, XL, XXL" readonly
+                     style="background-color: #e9ecef; cursor: not-allowed; font-weight: 600; color: #495057;">
+              <div class="text-muted small mt-1">Hệ thống tự động áp dụng 5 size chuẩn.</div>
+            </div>
           </div>
+
           <div class="col-md-6 d-flex align-items-center position-relative mb-3">
             <label for="productColor" class="form-label" style="width: 150px;">Màu sắc</label>
             <input type="text" class="form-control" id="productColor" name="productColor" value="${productColor}" placeholder="Vàng, Trắng" style="margin-left: 40px;">
             <div class="text-danger small position-absolute" style="top: 100%; left: 162px;" id="error-productColor">${errorProductColor}</div>
           </div>
         </div>
+
         <div class="row mb-3">
           <div class="col-md-6 d-flex align-items-center position-relative mb-3">
             <label for="productQuantity" class="form-label" style="width: 150px;">Số lượng</label>
             <input type="number" class="form-control" id="productQuantity" name="productQuantity" value="${productQuantity}" style="margin-left: 40px;">
             <div class="text-danger small position-absolute" style="top: 100%; left: 162px;" id="error-productQuantity">${errorProductQuantity}</div>
           </div>
+
           <div class="col-md-6 d-flex align-items-center position-relative mb-3">
             <label for="productImage" class="form-label" style="width: 150px;">Ảnh sản phẩm</label>
-            <input class="form-control" type="file" id="productImage" name="productImage" multiple style="margin-left: 40px;">
-            <div class="text-danger small position-absolute" style="top: 100%; left: 162px;" id="error-productImage">${errorProductImage}</div>
+            <div style="flex-grow: 1; margin-left: 40px;">
+              <input class="form-control" type="file" id="productImage" name="productImage" multiple>
+              <div class="text-muted small mt-1">Nhấn giữ phím <b>Ctrl</b> để chọn cùng lúc tối đa 4 ảnh.</div>
+              <div class="text-danger small position-absolute" style="top: 100%; left: 0;" id="error-productImage">${errorProductImage}</div>
+            </div>
           </div>
         </div>
 
@@ -81,6 +93,7 @@
             <div class="text-danger small position-absolute" style="top: 100%; left: 162px;" id="error-productDescription">${errorProductDescription}</div>
           </div>
         </div>
+
         <div class="d-flex justify-content-between mt-4">
           <a href="admin-manage-product" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Quay lại danh sách

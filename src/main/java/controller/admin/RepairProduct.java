@@ -76,9 +76,17 @@ public class RepairProduct extends HttpServlet {
     }
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+
+        System.out.println("=== BẮT ĐẦU CHẠY VÀO HÀM CẬP NHẬT SẢN PHẨM ===");
+
         if (ServletFileUpload.isMultipartContent(request)) {
             ProductObject product = new ProductObject();
-            String imagePath = null;
+            StringBuilder errors = new StringBuilder();
+            String[] oldImages = new String[4];
+            int imageCount = 1;
+
             try {
                 DiskFileItemFactory factory = new DiskFileItemFactory();
                 ServletFileUpload upload = new ServletFileUpload(factory);
@@ -88,6 +96,7 @@ public class RepairProduct extends HttpServlet {
                     if (item.isFormField()) {
                         String fieldName = item.getFieldName();
                         String fieldValue = item.getString("UTF-8");
+
                         switch (fieldName) {
                             case "productId":
                                 product.setProductId(Integer.parseInt(fieldValue));
@@ -99,106 +108,90 @@ public class RepairProduct extends HttpServlet {
                                 product.setProductCode(fieldValue);
                                 break;
                             case "productPrice":
-                                product.setProductPrice(Double.parseDouble(fieldValue));
+                                try { product.setProductPrice(Double.parseDouble(fieldValue)); }
+                                catch (Exception e) { product.setProductPrice(-1); }
                                 break;
-                            case "categoryId": // ĐÃ SỬA: Lấy ID danh mục (int) thay vì productCategory (String)
-                                product.setCategoryId(Integer.parseInt(fieldValue));
+                            case "categoryId":
+                                try { product.setCategoryId(Integer.parseInt(fieldValue)); }
+                                catch (Exception e) { product.setCategoryId(0); }
                                 break;
                             case "productColor":
                                 product.setProductColor(fieldValue);
                                 break;
-                            case "productSize":
-                                product.setProductSize(fieldValue);
-                                break;
                             case "productQuantity":
-                                product.setProductQuantity(Integer.parseInt(fieldValue));
+                                try { product.setProductQuantity(Integer.parseInt(fieldValue)); }
+                                catch (Exception e) { product.setProductQuantity(-1); }
                                 break;
                             case "productDescription":
                                 product.setProductDescription(fieldValue);
                                 break;
-                            case "productImagePath":
-                                imagePath = fieldValue; // Đây là đường dẫn ảnh cũ
-                                break;
+                            case "oldImage1": oldImages[0] = fieldValue; break;
+                            case "oldImage2": oldImages[1] = fieldValue; break;
+                            case "oldImage3": oldImages[2] = fieldValue; break;
+                            case "oldImage4": oldImages[3] = fieldValue; break;
                         }
-                    } else if (item.getFieldName().equals("productImage") && item.getSize() > 0) {
-                        String fileName = new File(item.getName()).getName();
-                        String uploadPath = getServletContext().getRealPath("") + File.separator + "templates" + File.separator + "admin" + File.separator + "img";
-                        File uploadDir = new File(uploadPath);
-                        if (!uploadDir.exists()) {
-                            uploadDir.mkdirs();
-                        }
-                        String uniqueFileName = System.currentTimeMillis() + "_" + fileName;
-                        String newImagePath = "/templates/admin/img/" + uniqueFileName;
-                        File storeFile = new File(uploadPath + File.separator + uniqueFileName);
-                        item.write(storeFile);
+                    } else {
+                        if (item.getFieldName().equals("productImage") && item.getSize() > 0) {
+                            String fileName = new File(item.getName()).getName();
+                            String uploadPath = getServletContext().getRealPath("") + File.separator + "templates" + File.separator + "admin" + File.separator + "img";
+                            File uploadDir = new File(uploadPath);
+                            if (!uploadDir.exists()) uploadDir.mkdirs();
 
-                        // ĐÃ SỬA: Đặt ảnh vào đúng thuộc tính Image1 (giống hàm Update trong DAO)
-                        product.setProductImage1(newImagePath);
+                            String uniqueFileName = System.currentTimeMillis() + "_" + fileName;
+                            String newImagePath = "/templates/admin/img/" + uniqueFileName;
+                            item.write(new File(uploadPath + File.separator + uniqueFileName));
+
+                            if (imageCount == 1) product.setProductImage1(newImagePath);
+                            else if (imageCount == 2) product.setProductImage2(newImagePath);
+                            else if (imageCount == 3) product.setProductImage3(newImagePath);
+                            else if (imageCount == 4) product.setProductImage4(newImagePath);
+
+                            imageCount++;
+                        }
                     }
                 }
 
-                // Nếu người dùng không upload ảnh mới, sử dụng lại ảnh cũ
-                if (product.getProductImage1() == null && imagePath != null && !imagePath.isEmpty()) {
-                    product.setProductImage1(imagePath);
-                }
+                // Gộp ảnh cũ nếu không upload ảnh mới
+                if (product.getProductImage1() == null && oldImages[0] != null) product.setProductImage1(oldImages[0]);
+                if (product.getProductImage2() == null && oldImages[1] != null) product.setProductImage2(oldImages[1]);
+                if (product.getProductImage3() == null && oldImages[2] != null) product.setProductImage3(oldImages[2]);
+                if (product.getProductImage4() == null && oldImages[3] != null) product.setProductImage4(oldImages[3]);
 
-                // Server-side validation
-                StringBuilder errors = new StringBuilder();
-                if (product.getProductName() == null || product.getProductName().trim().isEmpty()) {
-                    errors.append("Tên sản phẩm không được để trống.\n");
-                }
-                if (product.getProductCode() == null || product.getProductCode().trim().isEmpty()) {
-                    errors.append("Mã sản phẩm không được để trống.\n");
-                }
-                if (product.getProductPrice() <= 0) {
-                    errors.append("Giá sản phẩm phải là số dương.\n");
-                }
-                if (product.getCategoryId() <= 0) { // ĐÃ SỬA: Validate ID danh mục
-                    errors.append("Danh mục không được để trống.\n");
-                }
-                if (product.getProductColor() == null || product.getProductColor().trim().isEmpty()) {
-                    errors.append("Màu sắc không được để trống.\n");
-                }
-                if (product.getProductSize() == null || product.getProductSize().trim().isEmpty()) {
-                    errors.append("Kích cỡ không được để trống.\n");
-                }
-                if (product.getProductQuantity() < 0) {
-                    errors.append("Số lượng phải là số không âm.\n");
-                }
-                if (product.getProductDescription() == null || product.getProductDescription().trim().isEmpty()) {
-                    errors.append("Mô tả sản phẩm không được để trống.\n");
-                }
+                product.setProductSize("S, M, L, XL, XXL");
+
+                // Bắt lỗi
+                if (product.getProductName() == null || product.getProductName().trim().isEmpty()) errors.append("Tên sản phẩm trống.\n");
+                if (product.getProductPrice() <= 0) errors.append("Giá sản phẩm không hợp lệ.\n");
+
+                System.out.println("Số lượng lỗi validation: " + errors.length());
 
                 if (errors.length() > 0) {
-                    System.out.println("Validation errors: " + errors.toString());
                     request.setAttribute("error", errors.toString());
                     request.setAttribute("product", product);
-                    request.setAttribute("categories", getFlatCategoryList()); // Nạp lại danh mục khi có lỗi
-                    RequestDispatcher rd = request.getRequestDispatcher("/views/admin/repair-product.jsp");
-                    rd.forward(request, response);
+                    request.setAttribute("categories", getFlatCategoryList());
+                    request.getRequestDispatcher("/views/admin/repair-product.jsp").forward(request, response);
                     return;
                 }
 
-                // Cập nhật sản phẩm trong database
+                System.out.println(">>> CHUẨN BỊ LƯU VÀO DATABASE CHO SẢN PHẨM ID: " + product.getProductId());
                 boolean success = productDAO.updateProduct(product);
+
                 if (success) {
-                    System.out.println("Product updated successfully");
-                    // Nạp thông báo thành công vào Session để JSP hứng được
+                    System.out.println(">>> LƯU THÀNH CÔNG, ĐANG CHUYỂN TRANG...");
                     request.getSession().setAttribute("message", "Cập nhật sản phẩm thành công!");
                     response.sendRedirect(request.getContextPath() + "/admin/admin-manage-product");
-                    // ----------------------
                 } else {
-                    throw new Exception("Không thể cập nhật sản phẩm.");
+                    throw new Exception("Lỗi Update DAO trả về false.");
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                System.out.println("Error updating product: " + e.getMessage());
-                request.setAttribute("error", "Lỗi khi cập nhật sản phẩm: " + e.getMessage());
-                request.setAttribute("product", product);
+                System.out.println(">>> LỖI EXCEPTION: " + e.getMessage());
+                request.setAttribute("error", "Lỗi hệ thống: " + e.getMessage());
                 request.setAttribute("categories", getFlatCategoryList());
-                RequestDispatcher rd = request.getRequestDispatcher("/views/admin/repair-product.jsp");
-                rd.forward(request, response);
+                request.getRequestDispatcher("/views/admin/repair-product.jsp").forward(request, response);
             }
+        } else {
+            System.out.println(">>> LỖI: Form không phải định dạng Multipart!");
         }
     }
 }

@@ -11,7 +11,6 @@
 <main id="main" class="main">
     <div class="pagetitle">
         <h1>Báo cáo thống kê</h1>
-
     </div>
 
     <c:if test="${not empty error}">
@@ -19,11 +18,46 @@
     </c:if>
 
     <section class="section dashboard">
+
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card mb-0 shadow-sm">
+                    <div class="card-body p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <h6 class="mb-0 me-2 fw-bold text-primary text-nowrap"><i class="bi bi-calendar-range"></i> Lọc dữ liệu:</h6>
+                            <form action="${pageContext.request.contextPath}/admin/admin-report" method="GET" class="d-flex align-items-center m-0 gap-2">
+                                <input type="date" name="fromDate" value="${fromDate}" class="form-control form-control-sm" style="width: 150px;" required>
+                                <span class="text-muted fw-bold">-</span>
+                                <input type="date" name="toDate" value="${toDate}" class="form-control form-control-sm" style="width: 150px;" required>
+                                <button type="submit" class="btn btn-primary btn-sm text-nowrap">
+                                    <i class="bi bi-filter"></i> Xem báo cáo
+                                </button>
+                            </form>
+                        </div>
+
+                        <div>
+                            <a href="admin-report" class="btn btn-light btn-sm border text-nowrap">
+                                <i class="bi bi-arrow-clockwise"></i> Làm mới
+                            </a>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="row">
             <div class="col-xxl-6 col-md-6">
-                <div class="card info-card revenue-card">
+                <div class="card info-card revenue-card shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">Tổng Doanh Thu <span>| Toàn thời gian</span></h5>
+                        <h5 class="card-title">Tổng Doanh Thu
+                            <span>|
+                                <c:choose>
+                                    <c:when test="${not empty fromDate}">${fromDate} đến ${toDate}</c:when>
+                                    <c:otherwise>Toàn thời gian</c:otherwise>
+                                </c:choose>
+                            </span>
+                        </h5>
                         <div class="d-flex align-items-center">
                             <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
                                 <i class="bi bi-currency-dollar"></i>
@@ -44,9 +78,16 @@
             </div>
 
             <div class="col-xxl-6 col-md-6">
-                <div class="card info-card sales-card">
+                <div class="card info-card sales-card shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">Số Lượng Đơn <span>| Toàn thời gian</span></h5>
+                        <h5 class="card-title">Số Lượng Đơn
+                            <span>|
+                                <c:choose>
+                                    <c:when test="${not empty fromDate}">${fromDate} đến ${toDate}</c:when>
+                                    <c:otherwise>Toàn thời gian</c:otherwise>
+                                </c:choose>
+                            </span>
+                        </h5>
                         <div class="d-flex align-items-center">
                             <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
                                 <i class="bi bi-cart"></i>
@@ -63,7 +104,7 @@
 
         <div class="row">
             <div class="col-lg-8 mx-auto">
-                <div class="card">
+                <div class="card shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title">Tỷ lệ Trạng thái Đơn hàng <span>| Phân tích hiệu suất</span></h5>
 

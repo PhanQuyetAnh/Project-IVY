@@ -63,10 +63,15 @@ public class addProduct extends HttpServlet {
     }
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+
         if (ServletFileUpload.isMultipartContent(request)) {
             ProductObject product = new ProductObject();
-            String imagePath = null;
             StringBuilder errors = new StringBuilder();
+
+            // Biến đếm để xử lý mảng nhiều ảnh
+            int imageCount = 1;
 
             try {
                 DiskFileItemFactory factory = new DiskFileItemFactory();
@@ -85,26 +90,36 @@ public class addProduct extends HttpServlet {
                                 product.setProductCode(fieldValue);
                                 break;
                             case "productPrice":
-                                product.setProductPrice(Double.parseDouble(fieldValue));
+                                try {
+                                    product.setProductPrice(Double.parseDouble(fieldValue));
+                                } catch (NumberFormatException e) {
+                                    product.setProductPrice(-1); // Gán âm để tí nữa validation bắt lỗi
+                                }
                                 break;
-                            case "categoryId": // ĐÃ SỬA: Bắt field categoryId thay vì productCategory
-                                product.setCategoryId(Integer.parseInt(fieldValue));
+                            case "categoryId":
+                                try {
+                                    product.setCategoryId(Integer.parseInt(fieldValue));
+                                } catch (NumberFormatException e) {
+                                    product.setCategoryId(0);
+                                }
                                 break;
                             case "productColor":
                                 product.setProductColor(fieldValue);
                                 break;
-                            case "productSize":
-                                product.setProductSize(fieldValue);
-                                break;
                             case "productQuantity":
-                                product.setProductQuantity(Integer.parseInt(fieldValue));
+                                try {
+                                    product.setProductQuantity(Integer.parseInt(fieldValue));
+                                } catch (NumberFormatException e) {
+                                    product.setProductQuantity(-1);
+                                }
                                 break;
                             case "productDescription":
                                 product.setProductDescription(fieldValue);
                                 break;
+                            // Bỏ qua lấy "productSize" từ Form vì ta sẽ fix cứng bên dưới
                         }
                     } else {
-                        // Tạm thời hứng ảnh vào productImage1 (Vì DB đang lưu ảnh 1, 2, 3, 4)
+                        // Xử lý bóc tách 4 ảnh từ input multiple
                         if (item.getFieldName().equals("productImage") && item.getSize() > 0) {
                             String fileName = new File(item.getName()).getName();
                             String uploadPath = getServletContext().getRealPath("") + File.separator + "templates" + File.separator + "admin" + File.separator + "img";
@@ -112,17 +127,30 @@ public class addProduct extends HttpServlet {
                             if (!uploadDir.exists()) {
                                 uploadDir.mkdirs();
                             }
-                            imagePath = "/templates/admin/img/" + fileName;
+
+                            String imagePath = "/templates/admin/img/" + fileName;
                             File storeFile = new File(uploadPath + File.separator + fileName);
                             item.write(storeFile);
 
-                            // ĐÃ SỬA: Lưu vào ảnh chính (Image 1)
-                            product.setProductImage1(imagePath);
+                            // Phân bổ lần lượt các file ảnh vào đúng cột trong DB
+                            if (imageCount == 1) {
+                                product.setProductImage1(imagePath);
+                            } else if (imageCount == 2) {
+                                product.setProductImage2(imagePath);
+                            } else if (imageCount == 3) {
+                                product.setProductImage3(imagePath);
+                            } else if (imageCount == 4) {
+                                product.setProductImage4(imagePath);
+                            }
+                            imageCount++; // Tăng biến đếm cho ảnh tiếp theo
                         }
                     }
                 }
 
-                // Server-side validation
+                // [LOGIC QUAN TRỌNG]: Mặc định đủ 5 size cho mọi sản phẩm IVY Moda
+                product.setProductSize("S, M, L, XL, XXL");
+
+                // --- KIỂM TRA LỖI (SERVER-SIDE VALIDATION) ---
                 if (product.getProductName() == null || product.getProductName().trim().isEmpty()) {
                     errors.append("Tên sản phẩm không được để trống.\n");
                     request.setAttribute("errorProductName", "Tên sản phẩm không được để trống");
@@ -133,48 +161,42 @@ public class addProduct extends HttpServlet {
                 }
                 if (product.getProductPrice() <= 0) {
                     errors.append("Giá sản phẩm phải là số dương.\n");
-                    request.setAttribute("errorProductPrice", "Giá sản phẩm phải là số dương");
+                    request.setAttribute("errorProductPrice", "Giá sản phẩm phải hợp lệ và lớn hơn 0");
                 }
-
-                // ĐÃ SỬA: Validate số nguyên cho Category
                 if (product.getCategoryId() <= 0) {
                     errors.append("Danh mục không được để trống.\n");
                     request.setAttribute("errorProductCategory", "Vui lòng chọn danh mục");
                 }
-
                 if (product.getProductColor() == null || product.getProductColor().trim().isEmpty()) {
                     errors.append("Màu sắc không được để trống.\n");
                     request.setAttribute("errorProductColor", "Màu sắc không được để trống");
                 }
-                if (product.getProductSize() == null || product.getProductSize().trim().isEmpty()) {
-                    errors.append("Kích cỡ không được để trống.\n");
-                    request.setAttribute("errorProductSize", "Kích cỡ không được để trống");
-                }
                 if (product.getProductQuantity() < 0) {
                     errors.append("Số lượng phải là số không âm.\n");
-                    request.setAttribute("errorProductQuantity", "Số lượng phải là số không âm");
+                    request.setAttribute("errorProductQuantity", "Số lượng phải là số lớn hơn hoặc bằng 0");
                 }
                 if (product.getProductDescription() == null || product.getProductDescription().trim().isEmpty()) {
                     errors.append("Mô tả sản phẩm không được để trống.\n");
                     request.setAttribute("errorProductDescription", "Mô tả sản phẩm không được để trống");
                 }
-                if (imagePath == null) {
-                    errors.append("Ảnh sản phẩm không được để trống.\n");
-                    request.setAttribute("errorProductImage", "Ảnh sản phẩm không được để trống");
+                if (product.getProductImage1() == null) {
+                    errors.append("Ảnh chính không được để trống.\n");
+                    request.setAttribute("errorProductImage", "Vui lòng chọn ít nhất 1 ảnh (tối đa 4 ảnh)");
                 }
 
+                // Nếu có bất kỳ lỗi nào, trả lại thông tin đã nhập ra màn hình (để người dùng không phải nhập lại từ đầu)
                 if (errors.length() > 0) {
                     request.setAttribute("errorMessage", errors.toString());
                     request.setAttribute("productName", product.getProductName());
                     request.setAttribute("productCode", product.getProductCode());
-                    request.setAttribute("productPrice", product.getProductPrice());
-                    request.setAttribute("categoryId", product.getCategoryId()); // ĐÃ SỬA
-                    request.setAttribute("productSize", product.getProductSize());
+                    request.setAttribute("productPrice", product.getProductPrice() > 0 ? product.getProductPrice() : "");
+                    request.setAttribute("categoryId", product.getCategoryId());
+                    request.setAttribute("productSize", product.getProductSize()); // Truyền ra cho ô readonly
                     request.setAttribute("productColor", product.getProductColor());
-                    request.setAttribute("productQuantity", product.getProductQuantity());
+                    request.setAttribute("productQuantity", product.getProductQuantity() >= 0 ? product.getProductQuantity() : "");
                     request.setAttribute("productDescription", product.getProductDescription());
 
-                    // Nạp lại danh sách để lặp dropdown nếu có lỗi
+                    // Nạp lại danh sách Category cho ô Select Option
                     request.setAttribute("categories", getFlatCategoryList());
 
                     RequestDispatcher rd = request.getRequestDispatcher("/views/admin/add-product.jsp");
@@ -182,18 +204,18 @@ public class addProduct extends HttpServlet {
                     return;
                 }
 
-                // Lưu sản phẩm vào database
+                // --- NẾU DỮ LIỆU ĐÚNG CHUẨN -> LƯU VÀO DATABASE ---
                 boolean success = productDAO.insertProduct(product);
                 if (success) {
                     request.getSession().setAttribute("message", "Thêm sản phẩm mới thành công!");
                     response.sendRedirect(request.getContextPath() + "/admin/admin-manage-product");
                 } else {
-                    throw new Exception("Không thể thêm sản phẩm.");
+                    throw new Exception("Lỗi hệ thống khi lưu xuống Database.");
                 }
+
             } catch (Exception e) {
                 e.printStackTrace();
                 request.setAttribute("errorMessage", "Lỗi khi thêm sản phẩm: " + e.getMessage());
-                // ... (set lại attributes giống bên trên)
                 request.setAttribute("categories", getFlatCategoryList());
                 RequestDispatcher rd = request.getRequestDispatcher("/views/admin/add-product.jsp");
                 rd.forward(request, response);

@@ -129,15 +129,16 @@
 	<!-- Section 2 more: Best Seller -->
 	<div class="section-2">
 		<div class="container">
-			<h2 class="box-title">RẠNG RỠ THÁNG 3 ƯU ĐÃI LỚN - GIẢM 50% CÁC
+			<h2 class="box-title">RẠNG RỠ THÁNG 6 ƯU ĐÃI LỚN - GIẢM tới 60% CÁC
 				SẢN PHẨM</h2>
 			<div class="swiper swiperSection2">
 				<div class="swiper-wrapper">
 					<c:forEach var="product" items="${saleProducts}">
 						<div class="swiper-slide product-item">
 							<div class="inner-tag">Best Seller</div>
+
 							<div class="inner-discount">
-								-50<span>%</span>
+								-${product.discountPercent}<span>%</span>
 							</div>
 							<div class="inner-image">
 								<a
@@ -167,7 +168,7 @@
 								</h3>
 								<div class="price-product">
 									<div class="inner-price">
-										<div class="inner-price-new">${product.productPrice / 2}đ</div>
+										<div class="inner-price-new">${product.productPrice - (product.productPrice * product.discountPercent / 100)}đ</div>
 										<div class="inner-price-old">${product.productPrice}đ</div>
 									</div>
 									<div class="inner-bag dropdown">

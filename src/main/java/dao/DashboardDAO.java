@@ -20,4 +20,6 @@ public interface DashboardDAO {
     Map<String, Double> getCategoryRadarData();
 
     Map<String, Integer> getOrderStatusCounts(String timeFilter);
+    double getTotalRevenueByDateRange(String fromDate, String toDate);
+    Map<String, Integer> getOrderStatusCountsByDateRange(String fromDate, String toDate);
 }

@@ -163,7 +163,7 @@
                         <c:url value="/public/product-detail" var="detailUrl">
                             <c:param name="id" value="${product.productId}" />
                         </c:url>
-                        <c:url value="${product.productImage}" var="imgUrl" />
+                        <c:url value="${product.productImage1}" var="imgUrl" />
                         <div class="product-item">
                             <c:choose>
                                 <c:when test="${product.discountPercent > 0}">

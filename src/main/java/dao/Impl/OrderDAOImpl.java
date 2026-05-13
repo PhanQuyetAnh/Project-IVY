@@ -103,7 +103,7 @@ public class OrderDAOImpl implements OrderDAO {
                         order.setPaymentStatus(rs.getString("payment_status"));
                         order.setPaymentMethod(rs.getString("payment_method"));
 
-                        // ĐÃ SỬA: Map thông tin Shipping vào UserObject để JSP của bạn dùng được luôn không cần sửa code HTML
+                        // ĐÃ SỬA: Map thông tin Shipping vào UserObject
                         UserObject user = new UserObject();
                         user.setFullname(rs.getString("shipping_name"));
                         user.setPhoneNumber(rs.getString("shipping_phone"));

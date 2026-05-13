@@ -85,26 +85,30 @@ public class DashboardDAOImpl implements DashboardDAO {
 
         String sql = "";
 
-        if ("today".equals(timeFilter)) {
-            // Lấy theo giờ
+        // ĐÃ CHUẨN HÓA: Mặc định là "month" theo đúng ý đồ của Quyết Anh
+        String activeFilter = (timeFilter == null || timeFilter.trim().isEmpty()) ? "month" : timeFilter;
+
+        if ("today".equals(activeFilter)) {
+            // Lấy theo giờ trong ngày
             sql = "SELECT HOUR(order_date) as label, COUNT(*) as total_order, SUM(total_amount) as total_revenue " +
                     "FROM `Order` WHERE DATE(order_date) = CURDATE() AND order_status IN (?, ?) " +
                     "GROUP BY HOUR(order_date) ORDER BY HOUR(order_date) ASC";
         }
-        else if ("year".equals(timeFilter)) {
-            // Lấy theo tháng
+        else if ("year".equals(activeFilter)) {
+            // Lấy theo các tháng trong năm nay
             sql = "SELECT MONTH(order_date) as label, COUNT(*) as total_order, SUM(total_amount) as total_revenue " +
                     "FROM `Order` WHERE YEAR(order_date) = YEAR(CURDATE()) AND order_status IN (?, ?) " +
                     "GROUP BY MONTH(order_date) ORDER BY MONTH(order_date) ASC";
         }
-        else if ("all".equals(timeFilter)) {
-            // ĐÃ BỔ SUNG: Mốc TẤT CẢ (Gộp theo Tháng/Năm để biểu đồ không bị nát)
+        else if ("all".equals(activeFilter)) {
+            // ĐÃ FIX LỖI SQL: Gộp theo Tháng/Năm an toàn cho MySQL
             sql = "SELECT DATE_FORMAT(order_date, '%m/%Y') as label, COUNT(*) as total_order, SUM(total_amount) as total_revenue " +
                     "FROM `Order` WHERE order_status IN (?, ?) " +
-                    "GROUP BY YEAR(order_date), MONTH(order_date) ORDER BY YEAR(order_date) ASC, MONTH(order_date) ASC";
+                    "GROUP BY DATE_FORMAT(order_date, '%m/%Y'), YEAR(order_date), MONTH(order_date) " +
+                    "ORDER BY YEAR(order_date) ASC, MONTH(order_date) ASC";
         }
         else {
-            // Mốc THÁNG: Lấy ngày trong tháng
+            // Mặc định (month): Lấy theo từng ngày trong tháng này
             sql = "SELECT DAY(order_date) as label, COUNT(*) as total_order, SUM(total_amount) as total_revenue " +
                     "FROM `Order` WHERE MONTH(order_date) = MONTH(CURDATE()) AND YEAR(order_date) = YEAR(CURDATE()) AND order_status IN (?, ?) " +
                     "GROUP BY DAY(order_date) ORDER BY DAY(order_date) ASC";
@@ -121,15 +125,15 @@ public class DashboardDAOImpl implements DashboardDAO {
                     String labelStr = rs.getString("label");
                     String displayLabel = "";
 
-                    // Chuẩn hóa tên nhãn hiển thị cho mượt
-                    if ("today".equals(timeFilter)) {
-                        displayLabel = labelStr + ":00"; // Hiện 08:00, 15:00...
-                    } else if ("year".equals(timeFilter)) {
-                        displayLabel = "Tháng " + labelStr;
-                    } else if ("all".equals(timeFilter)) {
-                        displayLabel = labelStr; // Hiện 04/2026...
+                    // Định dạng tên nhãn cho biểu đồ đẹp mắt
+                    if ("today".equals(activeFilter)) {
+                        displayLabel = labelStr + ":00"; // Hiện 08:00
+                    } else if ("year".equals(activeFilter)) {
+                        displayLabel = "Tháng " + labelStr; // Hiện Tháng 5
+                    } else if ("all".equals(activeFilter)) {
+                        displayLabel = labelStr; // Hiện 05/2026
                     } else {
-                        displayLabel = "Ngày " + labelStr;
+                        displayLabel = "Ngày " + labelStr; // Hiện Ngày 13
                     }
 
                     labels.add("'" + displayLabel + "'");
@@ -205,6 +209,43 @@ public class DashboardDAOImpl implements DashboardDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        return counts;
+    }
+
+    // 1. Tính doanh thu trong khoảng ngày (Chỉ tính đơn Thành công/Đã xác nhận)
+    @Override
+    public double getTotalRevenueByDateRange(String fromDate, String toDate) {
+        String sql = "SELECT SUM(total_amount) AS revenue FROM `Order` " +
+                "WHERE order_status IN ('Thành công', 'Đã xác nhận') " +
+                "AND DATE(order_date) BETWEEN ? AND ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, fromDate);
+            ps.setString(2, toDate);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getDouble("revenue");
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
+    }
+
+    // 2. Đếm trạng thái đơn hàng trong khoảng ngày để vẽ biểu đồ Donut
+    @Override
+    public Map<String, Integer> getOrderStatusCountsByDateRange(String fromDate, String toDate) {
+        Map<String, Integer> counts = new HashMap<>();
+        String sql = "SELECT order_status, COUNT(*) AS total_count FROM `Order` " +
+                "WHERE DATE(order_date) BETWEEN ? AND ? " +
+                "GROUP BY order_status";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, fromDate);
+            ps.setString(2, toDate);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    counts.put(rs.getString("order_status"), rs.getInt("total_count"));
+                }
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
         return counts;
     }
 }

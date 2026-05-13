@@ -77,7 +77,7 @@
                                         <c:forEach var="product" items="${products}">
                                             <div class="col-md-4 mb-3">
                                                 <div class="card">
-                                                    <img src="<c:url value='${product.productImage}'/>" class="card-img-top" alt="${product.productName}">
+                                                    <img src="<c:url value='${product.productImage1}'/>" class="card-img-top" alt="${product.productName}">
                                                     <div class="card-body">
                                                         <h5 class="card-title">
                                                             <a href="<c:url value='/product-detail?id=${product.productId}'/>">${product.productName}</a>
@@ -105,7 +105,7 @@
                                         <c:forEach var="product" items="${deletedProducts}">
                                             <div class="col-md-4 mb-3">
                                                 <div class="card">
-                                                    <img src="<c:url value='${product.productImage}'/>" class="card-img-top" alt="${product.productName}">
+                                                    <img src="<c:url value='${product.productImage1}'/>" class="card-img-top" alt="${product.productName}">
                                                     <div class="card-body">
                                                         <h5 class="card-title">${product.productName}</h5>
                                                         <p class="card-text">Mã: ${product.productCode}</p>
@@ -137,7 +137,7 @@
                     id: ${product.productId},
                     code: "${product.productCode}",
                     name: "${product.productName}",
-                    image: "<c:url value='${product.productImage}'/>",
+                    image: "<c:url value='${product.productImage1}'/>",
                     price: "${product.productPrice}đ",
                     category: "${product.categoryName}",
                     createdDate: "${product.createdAt}"
@@ -151,7 +151,7 @@
                     id: ${product.productId},
                     code: "${product.productCode}",
                     name: "${product.productName}",
-                    image: "<c:url value='${product.productImage}'/>",
+                    image: "<c:url value='${product.productImage1}'/>",
                     price: "${product.productPrice}đ",
                     category: "${product.categoryName}",
                     createdDate: "${product.createdAt}"
