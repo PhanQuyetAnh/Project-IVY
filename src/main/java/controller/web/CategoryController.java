@@ -57,7 +57,7 @@ public class CategoryController extends HttpServlet {
                 // --- KẾT THÚC PHẦN THÊM MỚI ---
 
 
-                // --- PHẦN DƯỚI NÀY LÀ TÌM TÊN DANH MỤC THÔNG MINH CỦA BẠN (GIỮ NGUYÊN) ---
+                // --- PHẦN DƯỚI NÀY LÀ TÌM TÊN DANH MỤC THÔNG MINH ---
                 String categoryName = "Tất cả sản phẩm";
                 List<CategoryObject> menuCategories = (List<CategoryObject>) getServletContext().getAttribute("menuCategories");
 

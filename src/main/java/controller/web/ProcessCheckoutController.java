@@ -88,7 +88,7 @@ public class ProcessCheckoutController extends HttpServlet {
         OrderObject order = new OrderObject();
         order.setUserId(user.getUserId());
         order.setTotalAmount(totalAmount);
-        // Lưu thông tin voucher vào hóa đơn (Bạn nhớ đảm bảo file OrderObject có 2 thuộc tính này nhé)
+        // Lưu thông tin voucher vào hóa đơn
         order.setDiscountAmount(discountAmount);
         order.setVoucherId(appliedVoucherId);
 
@@ -150,7 +150,7 @@ public class ProcessCheckoutController extends HttpServlet {
                 vnp_Params.put("vnp_TmnCode", vnp_TmnCode);
                 vnp_Params.put("vnp_Amount", String.valueOf(amount));
                 vnp_Params.put("vnp_CurrCode", "VND");
-                vnp_Params.put("vnp_BankCode", ""); // Fix cứng test thẻ NCB
+                vnp_Params.put("vnp_BankCode", "");
                 vnp_Params.put("vnp_TxnRef", vnp_TxnRef);
                 vnp_Params.put("vnp_OrderInfo", "Thanh toan don hang: " + vnp_TxnRef);
                 vnp_Params.put("vnp_OrderType", orderType);

@@ -47,7 +47,7 @@
 
 <script src="<c:url value='/templates/web/js/jquery-saleT5.js'/>"></script>
 <script src="<c:url value='/templates/web/js/cart.js'/>"></script>
-<script src="<c:url value='/templates/web/js/checkout.js'/>"></script>
+<script src="${pageContext.request.contextPath}/templates/web/js/checkout.js?v=<%= System.currentTimeMillis() %>"></script>
 <!-- ChatBot JavaScript - Phải load sau jQuery -->
 <script src="<c:url value='/templates/web/js/chatbot.js'/>"></script>
 </body>

@@ -22,6 +22,13 @@
                                 <option value="Hà Nội">Hà Nội</option>
                                 <option value="TP HCM">TP. Hồ Chí Minh</option>
                                 <option value="Đà Nẵng">Đà Nẵng</option>
+                                <option value="Hải Phòng">Hải Phòng</option>
+                                <option value="Cần Thơ">Cần Thơ</option>
+                                <option value="Bình Dương">Bình Dương</option>
+                                <option value="Đồng Nai">Đồng Nai</option>
+                                <option value="Quảng Ninh">Quảng Ninh</option>
+                                <option value="Thanh Hóa">Thanh Hóa</option>
+                                <option value="Bà Rịa - Vũng Tàu">Bà Rịa - Vũng Tàu</option>
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -122,3 +129,4 @@
         </div>
     </form>
 </div>
+

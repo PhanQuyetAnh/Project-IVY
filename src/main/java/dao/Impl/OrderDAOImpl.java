@@ -265,8 +265,6 @@ public class OrderDAOImpl implements OrderDAO {
                         order.setDiscountAmount(rs.getDouble("discount_amount"));
                         order.setVoucherId(rs.getInt("voucher_id"));
 
-                        // MẸO: Lưu tạm mã Voucher (IVY150K) vào một trường nào đó của Order (vd: lưu vào PromoCode nếu có)
-                        // Nếu OrderObject chưa có biến "voucherCode", bạn có thể tạo thêm trong Model.
 
                         // ĐÃ SỬA: Đẩy thông tin Shipping vào UserObject để in ra JSP
                         UserObject user = new UserObject();

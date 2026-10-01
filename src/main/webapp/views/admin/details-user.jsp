@@ -69,7 +69,7 @@
                                     <div class="col-md-6">
                                         <p id="userIsactive" style="margin-left: 30px;">
                                             <c:choose>
-                                            <c:when test="${user.active}">
+                                            <c:when test="${user.active == 1}">
                                               Hoạt động
                                         </c:when>
                                         <c:otherwise>
